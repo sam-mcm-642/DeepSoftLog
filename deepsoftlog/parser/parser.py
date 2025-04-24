@@ -4,7 +4,7 @@ from typing import Union
 from deepsoftlog.parser.problog_parser import ProbLogParser
 from deepsoftlog.algebraic_prover.terms.transformations import normalize_clauses
 from deepsoftlog.logic.soft_term import SoftTerm
-from deepsoftlog.logic.spl_module import SoftProofModule
+from deepsoftlog.logic.spl_module import SoftProofModule, DebugSoftProofModule
 
 
 class SoftProbLogParser(ProbLogParser):
@@ -19,7 +19,9 @@ class SoftProbLogParser(ProbLogParser):
 
     def parse(self, prolog_str: str, **kwargs):
         clauses = self.parse_clauses(prolog_str)
+        print(f"PARSED CLAUSES: {clauses}")
         clauses = normalize_clauses(clauses)
+        print(f"NORMALIZED CLAUSES: {clauses}")
         program = SoftProofModule(clauses, **kwargs)
         return program
 

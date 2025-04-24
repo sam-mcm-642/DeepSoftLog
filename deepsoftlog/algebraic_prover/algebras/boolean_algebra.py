@@ -1,4 +1,4 @@
-from .abstract_algebra import Algebra
+from deepsoftlog.algebraic_prover.algebras.abstract_algebra import Algebra
 
 
 class BooleanAlgebra(Algebra[bool]):

@@ -15,11 +15,12 @@ import torch.distributed as dist
 
 from ..data.dataloader import DataLoader
 from ..data.query import Query
-from ..logic.spl_module import SoftProofModule
+from ..logic.spl_module import SoftProofModule, DebugSoftProofModule
 from .logger import PrintLogger, WandbLogger
 from .loss import nll_loss, get_optimizer
 from .metrics import get_metrics, aggregate_metrics
 from . import set_seed, ConfigDict
+from deepsoftlog.data import expression_to_prolog, query_to_prolog
 
 
 def ddp_setup(rank, world_size):
@@ -76,6 +77,7 @@ class Trainer:
                 self.save(cfg)
             if do_eval and master and hasattr(self, 'val_dataloader'):
                 self.eval(self.val_dataloader, name='val')
+            print(f"Program algebra:\n{self.program.algebra._sdd_algebra.all_facts._val_to_ix}\n") if cfg['verbose'] else print(self.program)
 
     def train(self, cfg: dict, nb_workers: int = 1):
         if nb_workers == 1:
@@ -96,9 +98,39 @@ class Trainer:
         profiler.stop()
         profiler.open_in_browser()
 
+    # def train_epoch(self, verbose: bool):
+        
+    #     for queries in tqdm(self.train_dataset, leave=False, smoothing=0, disable=not verbose):
+    #         current_time = time()
+    #         loss, diff, proof_steps, nb_proofs = self.get_loss(queries)
+    #         grad_norm = 0.
+    #         if loss is not None:
+    #             grad_norm = self.step_optimizer()
+    #         if verbose:
+    #             self.logger.log({
+    #                 'grad_norm': grad_norm,
+    #                 'loss': loss,
+    #                 'diff': diff,
+    #                 "step_time": time() - current_time,
+    #                 "proof_steps": proof_steps,
+    #                 "nb_proofs": nb_proofs,
+    #             })
+    #     if verbose:
+    #         self.logger.print()
+    #     print("EPOCH END")
+    
     def train_epoch(self, verbose: bool):
+        # Clear the soft unification cache at the start of the epoch
+        if hasattr(self.program, 'soft_unification_cache'):
+            self.program.soft_unification_cache = {}
+        
         for queries in tqdm(self.train_dataset, leave=False, smoothing=0, disable=not verbose):
             current_time = time()
+            
+            # Clear the cache before each batch too (to be safe)
+            if hasattr(self.program, 'soft_unification_cache'):
+                self.program.soft_unification_cache = {}
+                
             loss, diff, proof_steps, nb_proofs = self.get_loss(queries)
             grad_norm = 0.
             if loss is not None:
@@ -114,18 +146,52 @@ class Trainer:
                 })
         if verbose:
             self.logger.print()
+        print("EPOCH END")
 
+    # def eval(self, dataloader: DataLoader, name='test'):
+    #     self.program.store.eval()
+    #     metrics = []
+    #     print(f"DataLoader: {dataloader}")
+    #     for queries in tqdm(dataloader, leave=False, smoothing=0):
+    #         print(f"Queries type:{type(queries[0])}")
+    #         queries = [q.query if hasattr(q, "query") else q for q in queries]
+    #         print(f"Queries type:{type(queries[0])}")
+    #         results = zip(queries, self._eval_queries(queries))
+    #         print(f"Results: {results}")
+    #         print(f"Queries type:{type(queries[0])}")
+    #         new_metrics = [get_metrics(query.query, result, queries) for query, result in results]
+    #         metrics += new_metrics
+    #     self.logger.log_eval(aggregate_metrics(metrics), name=name)
+    
     def eval(self, dataloader: DataLoader, name='test'):
+        print("EVALUATION STARTING")
         self.program.store.eval()
         metrics = []
+        print(f"DataLoader: {dataloader}")
+        for instance in dataloader.dataset.instances:
+            if not isinstance(instance.query, Query):
+                print(f"Instance query type: {type(instance.query)}")
+                instance.query = query_to_prolog(instance.query)
+
         for queries in tqdm(dataloader, leave=False, smoothing=0):
+
+            if not isinstance(queries, Query): 
+                print(f"Queries type:{type(queries[0])}") 
+                queries = [q.query for q in queries]
+
             results = zip(queries, self._eval_queries(queries))
-            new_metrics = [get_metrics(query, result, dataloader.dataset) for query, result in results]
+            print(f"Results: {results}")
+
+            # Ensure we only access .query if it's still a DatasetInstance
+            new_metrics = [get_metrics(query, result, queries) for query, result in results]
+
             metrics += new_metrics
+
         self.logger.log_eval(aggregate_metrics(metrics), name=name)
 
     def _query(self, queries: Iterable[Query]):
         for query in queries:
+            print(f"Query: {query.query}")
             result, proof_steps, nb_proofs = self.program(
                 query.query, **self.search_args
             )
@@ -133,8 +199,13 @@ class Trainer:
                 result = torch.tensor(result)
             yield result, proof_steps, nb_proofs
 
+        
+    
     def _query_result(self, queries: Iterable[Query]):
         for query in queries:
+            print("_query_result called, type:")
+            print(type(query))
+            print(query)
             yield self.program.query(query.query, **self.search_args)
 
     def _eval_queries(self, queries: Iterable[Query]):
@@ -148,8 +219,13 @@ class Trainer:
                     yield {}
 
     def get_loss(self, queries: Iterable[Query]) -> tuple[float, float, float, float]:
+        print(f"Queries: {queries[:5]}")
         results, proof_steps, nb_proofs = tuple(zip(*self._query(queries)))
+        print(f"Results: {results}")
+        print(f"Proof steps: {proof_steps}")
+        print(f"Number of proofs: {nb_proofs}")
         losses = [self.criterion(result, query.p) for result, query in zip(results, queries)]
+        print(f"Losses: {losses}")
         loss = torch.stack(losses).mean()
         errors = [query.error_with(result) for result, query in zip(results, queries)]
         if loss.requires_grad:
@@ -157,6 +233,7 @@ class Trainer:
         proof_steps, nb_proofs = float(np.mean(proof_steps)), float(np.mean(nb_proofs))
         return float(loss), float(np.mean(errors)), proof_steps, nb_proofs
 
+    
     def step_optimizer(self):
         with torch.no_grad():
             if self.grad_clip is not None:

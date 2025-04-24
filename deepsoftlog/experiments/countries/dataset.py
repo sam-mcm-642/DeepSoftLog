@@ -1,3 +1,6 @@
+import sys
+sys.path.append('/Users/sammcmanagan/Desktop/Thesis/DeepSoftLog')
+
 from pathlib import Path
 
 from deepsoftlog.data import load_tsv_file, data_to_prolog
@@ -10,6 +13,7 @@ from deepsoftlog.logic.soft_term import SoftTerm
 def get_train_dataloader(cfg: dict):
     train_dataset = CountriesDataset("train").subset(cfg['data_subset'])
     train_dataset = train_dataset.mutate_all_output()
+    print(f"Train dataset: {train_dataset}")
     return DataLoader(train_dataset, batch_size=cfg['batch_size'], shuffle=True, seed=cfg['seed'])
 
 
@@ -42,6 +46,7 @@ def generate_prolog_files():
         data = load_tsv_file(base_path / f"raw/countries_{problem}.tsv")
         data = data_to_prolog(data, name="countries")
         file_str = [f"{query.query}." for query in data]
+        print(file_str)
         with open(base_path / f"tmp/countries_{problem}.pl", "w+") as f:
             f.write("\n".join(file_str))
 

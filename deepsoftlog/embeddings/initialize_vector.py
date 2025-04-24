@@ -15,6 +15,7 @@ class Initializer:
         self.ndim = ndim
         self.init_mode = init_mode
         self.model = model
+        
 
     def __call__(self, x) -> Tensor | nn.Module:
         if isinstance(x, str):

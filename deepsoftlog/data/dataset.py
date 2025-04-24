@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, Tuple, TextIO, Callable
 
 from .mutator import OutputDomainMutator, _dataset_domain, OutputMaskMutator
-from ..parser.vocabulary import Vocabulary
+from deepsoftlog.parser.vocabulary import Vocabulary
 from .query import Query
 
 

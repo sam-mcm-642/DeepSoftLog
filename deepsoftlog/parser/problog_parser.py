@@ -16,6 +16,8 @@ from deepsoftlog.algebraic_prover.terms.transformations import normalize_clauses
 from deepsoftlog.algebraic_prover.terms.variable import Variable
 
 
+import inspect
+
 def split(
     string: str, split_symbol: str, l_brackets: str = "([", r_brackets: str = "])"
 ) -> list[str]:
@@ -44,16 +46,32 @@ def clean_program(program_str: str) -> str:
     program_str = re.sub(r"\n+", "\n", program_str)
     return program_str
 
+def debug_method_call(func):
+    def wrapper(*args, **kwargs):
+        class_name = args[0].__class__.__name__  # Get class name from 'self'
+        print(f"Calling: {class_name}.{func.__name__}")
+        return func(*args, **kwargs)
+    return wrapper
 
+def debug_class_methods(cls):
+    for attr_name, attr_value in cls.__dict__.items():
+        if callable(attr_value):  # Check if it's a method
+            setattr(cls, attr_name, debug_method_call(attr_value))
+    return cls
+
+@debug_class_methods
 class PrologParser:
     def parse_clauses(self, prolog_str: str) -> Iterable[Clause]:
         prolog_str = clean_program(prolog_str)
         clauses = [c.replace("\n", "") for c in prolog_str.split(".\n") if len(c)]
         clauses = [c.split(":-") for c in clauses]
+        print(f"Parse clauses: {clauses}")
         parsed_clauses = []
         for c in clauses:
             if len(c) == 1:
+                print(f"len 1: {c}")
                 fact = self.parse_fact(c[0])
+                print(f"fact: {fact}")
                 parsed_clauses.append(fact)
 
             elif len(c) == 2:
@@ -123,6 +141,7 @@ class PrologParser:
         return Clause(head, body)
 
     def parse(self, prolog_str: str):
+        print(f":prolog_str: {prolog_str}")
         clauses = self.parse_clauses(prolog_str)
         program = BooleanProofModule(clauses)
         return program

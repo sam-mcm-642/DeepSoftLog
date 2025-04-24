@@ -1,6 +1,7 @@
 from typing import Callable, Iterable, Tuple
 
 from deepsoftlog.algebraic_prover.terms.expression import Clause, Fact, Expr
+from deepsoftlog.logic.soft_unify import get_unify_fact, is_soft
 
 
 class External:
@@ -22,3 +23,4 @@ class External:
             (Fact(term.apply_substitution(answer_sub)), answer_sub, set())
             for answer_sub in all_answers
         )
+

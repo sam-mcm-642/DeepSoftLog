@@ -1,5 +1,6 @@
 import torch
 
+import deepsoftlog
 from deepsoftlog.experiments.countries.dataset import generate_prolog_files, get_test_dataloader, get_train_dataloader, get_val_dataloader
 from deepsoftlog.training import load_program, load_config
 from deepsoftlog.training.logger import WandbLogger
@@ -7,11 +8,19 @@ from deepsoftlog.training.loss import nll_loss, get_optimizer
 from deepsoftlog.training.trainer import Trainer
 
 
+
 def train(cfg):
     cfg = load_config(cfg)
+    print(cfg)
     generate_prolog_files()
     eval_dataloader = get_val_dataloader()
+    print(eval_dataloader)
     program = load_program(cfg, eval_dataloader)
+    print(program)
+    print(f"Program clauses:\n{program.clauses}\n") if cfg['verbose'] else print(program)
+    print(program) if not cfg['verbose'] else [print(f"Program builtins:\n{builtin.predicate if not isinstance(builtin, deepsoftlog.logic.spl_module.ExternalCut) else builtin.cache}\n") for builtin in program.builtins]
+    print(f"Program semantics:\n{program.semantics}\n") if cfg['verbose'] else print(program)
+    print(f"Program algebra:\n{program.algebra._sdd_algebra.all_facts._val_to_ix}\n") if cfg['verbose'] else print(program)
     optimizer = get_optimizer(program.get_store(), cfg)
     logger = WandbLogger(cfg)
     trainer = Trainer(
@@ -22,6 +31,7 @@ def train(cfg):
         max_depth=cfg['max_depth'],
     )
     trainer.val_dataloader = eval_dataloader
+    print(f"Program algebra:\n{program.algebra._sdd_algebra.all_facts._val_to_ix}\n") if cfg['verbose'] else print(program)
     trainer.train(cfg)
     trainer.eval(get_test_dataloader())
 

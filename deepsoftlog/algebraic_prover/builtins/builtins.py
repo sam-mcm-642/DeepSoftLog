@@ -1,6 +1,7 @@
 from deepsoftlog.algebraic_prover.terms.expression import Expr, Constant
 from deepsoftlog.algebraic_prover.terms.variable import Variable
-
+from deepsoftlog.logic.soft_term import SoftTerm
+from deepsoftlog.logic.soft_unify import soft_mgu, is_soft
 eps = 1e-6
 
 
@@ -50,6 +51,15 @@ def builtin_neq(lhs, rhs):
         return []
     else:
         return [{}]
+    
+def type_builtin(t1, t2):
+    # Only return success (with empty substitution) for soft terms
+    if is_soft(t1) and is_soft(t2):
+        # We'll return the empty substitution to indicate success
+        # The actual soft unification will be handled by the system
+        return [{}]
+    return []  # Return empty list (failure) for non-soft terms
+        
 
 
 COUNTER: int = 0

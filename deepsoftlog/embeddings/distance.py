@@ -1,15 +1,27 @@
 import torch
 from torch import Tensor
+from torch.nn import functional as F
 
 from deepsoftlog.algebraic_prover.algebras import safe_log
 
 
+# def embedding_similarity(x: Tensor, y: Tensor, distance_metric: str):
+#     """Returns a negative distance of two vectors in [0, 1]"""
+#     distance = -_get_distance(x, y, distance_metric)
+#     assert not torch.isnan(distance), f"Distance {distance_metric} is NaN: {x}, {y}"
+#     return distance
+
 def embedding_similarity(x: Tensor, y: Tensor, distance_metric: str):
     """Returns a negative distance of two vectors in [0, 1]"""
+    # Clone the input tensors to prevent in-place modifications
+    if isinstance(x, torch.Tensor) and x.requires_grad:
+        x = x.clone()
+    if isinstance(y, torch.Tensor) and y.requires_grad:
+        y = y.clone()
+    
     distance = -_get_distance(x, y, distance_metric)
     assert not torch.isnan(distance), f"Distance {distance_metric} is NaN: {x}, {y}"
     return distance
-
 
 def _get_distance(x: Tensor, y: Tensor, distance_metric: str):
     """
@@ -48,12 +60,25 @@ def normalised_l2_distance(x: Tensor, y: Tensor, scale: float = 2):
     return torch.linalg.norm(x - y) * scale
 
 
+# def angular_distance(x: Tensor, y: Tensor, scale: float = 4, eps=1e-6):
+#     cosine_similarity = torch.nn.functional.cosine_similarity(x, y, 0)
+#     # careful: d\dx exp^(-arccos(x)) approaches infinity for x=1
+#     cosine_similarity -= eps
+#     return torch.arccos(cosine_similarity) * scale
+
+
 def angular_distance(x: Tensor, y: Tensor, scale: float = 4, eps=1e-6):
+    # Clone the input tensors to prevent in-place modifications
+    if isinstance(x, torch.Tensor) and x.requires_grad:
+        x = x.clone()
+    if isinstance(y, torch.Tensor) and y.requires_grad:
+        y = y.clone()
+    
     cosine_similarity = torch.nn.functional.cosine_similarity(x, y, 0)
     # careful: d\dx exp^(-arccos(x)) approaches infinity for x=1
-    cosine_similarity -= eps
-    return torch.arccos(cosine_similarity) * scale
-
+    # Use a temporary variable to avoid modifying cosine_similarity in-place
+    adjusted_cosine = cosine_similarity - eps
+    return torch.arccos(adjusted_cosine) * scale
 
 def normalize(v):
     return torch.nn.functional.normalize(v, p=2, dim=0)

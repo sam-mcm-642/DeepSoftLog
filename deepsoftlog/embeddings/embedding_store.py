@@ -22,6 +22,8 @@ class EmbeddingStore(nn.Module):
         super().__init__()
         self.ndim = ndim
         self.device = 'cpu'
+        self.initializer = initializer
+        self.vocabulary = vocabulary
 
         print("- Initializing embeddings with vocabulary:", vocabulary)
         self.constant_embeddings = nn.ParameterDict()
@@ -42,6 +44,27 @@ class EmbeddingStore(nn.Module):
             score = embedding_similarity(e1, e2, distance_metric)
             self._cache[sign] = score
         return self._cache[sign]
+    
+    ###INFLATED PROBS
+    # def soft_unify_score(self, t1: Expr, t2: Expr, distance_metric: str):
+    #     if distance_metric == "dummy":
+    #         # Original was math.log(0.6)
+    #         # We'll add 0.1 to 0.6 in probability space, so math.log(0.6 + 0.1)
+    #         return math.log(0.7)  # 0.6 + 0.1 = 0.7
+
+    #     sign = frozenset([t1, t2])
+    #     if sign not in self._cache:
+    #         e1, e2 = self.forward(t1), self.forward(t2)
+    #         log_score = embedding_similarity(e1, e2, distance_metric)
+            
+    #         # Convert log score to probability, add 0.1, then convert back to log
+    #         prob_score = math.exp(log_score)
+    #         boosted_prob = min(prob_score + 0.1, 1.0)  # Add 0.1, but cap at 1.0
+    #         new_log_score = math.log(boosted_prob)
+            
+    #         self._cache[sign] = new_log_score
+    #     return self._cache[sign]
+    
 
     def forward(self, term: Expr):
         assert term.get_predicate() != ("~", 1), \
@@ -55,6 +78,9 @@ class EmbeddingStore(nn.Module):
     def _embed_constant(self, term: Expr):
         if isinstance(term, TensorTerm):
             return term.get_tensor().to(self.device)
+
+        # for name, param in self.constant_embeddings.items():
+        #     print(f"{name}: {param.data}")
 
         name = term.functor
         return self.constant_embeddings[name]

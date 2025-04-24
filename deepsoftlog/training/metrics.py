@@ -3,9 +3,27 @@ from sklearn.metrics import average_precision_score
 
 from ..data import Query
 
+def debug_expr_tree(expr, depth=0):
+    print(f"{'  ' * depth}Examining node: {expr}")
+    print(f"{'  ' * depth}Type: {type(expr)}")
+    print(f"{'  ' * depth}Dir: {dir(expr)}")
+    if hasattr(expr, 'arguments'):
+        print(f"{'  ' * depth}Arguments:")
+        for i, arg in enumerate(expr.arguments):
+            print(f"{'  ' * depth}  Argument {i}:")
+            debug_expr_tree(arg, depth + 1)
 
 def get_metrics(query: Query, results, dataset) -> dict[str, float]:
+    # print("\n=== Starting Expression Tree Debug ===")
+    # debug_expr_tree(query.query)
+    # print("=== End Expression Tree Debug ===\n")
+    # print("get_metrics")
+    # print(query)
+    # print(type(query))
+    # print(query.query)
+    # print(type(query.query))
     metrics = boolean_metrics(results, query)
+    # print(type(query.query))
     if not query.query.is_ground():
         assert query.p == 1
         metrics.update(rank_metrics(results, dataset))
