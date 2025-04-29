@@ -45,7 +45,7 @@ class ConjoinedFacts:
     #     return result
     
     def evaluate(self, algebra: Algebra):
-        print(f"ConjoinedFacts.evaluate called with pos_facts={self.pos_facts}")
+        # print(f"ConjoinedFacts.evaluate called with pos_facts={self.pos_facts}")
         
         # Check for empty facts
         if not self.pos_facts:
@@ -57,7 +57,7 @@ class ConjoinedFacts:
             print(f"WARNING: Very small probabilities detected: {small_probs}")
         
         result = algebra.reduce_mul_value(self.pos_facts, self.neg_facts)
-        print(f"reduce_mul_value result: {result}")
+        # print(f"reduce_mul_value result: {result}")
         
         # Check result for numerical issues
         if isinstance(result, torch.Tensor):
@@ -136,14 +136,14 @@ class DnfAlgebra(CompoundAlgebra[Union[ConjoinedFacts, SddFormula]]):
     
     def _as_sdd(self, value):
         if isinstance(value, ConjoinedFacts):
-            print(f"Converting ConjoinedFacts to SDD: pos_facts={value.pos_facts}, neg_facts={value.neg_facts}")
+            #print(f"Converting ConjoinedFacts to SDD: pos_facts={value.pos_facts}, neg_facts={value.neg_facts}")
             
             # Pre-check for potential issues
             if not value.pos_facts:
                 print("WARNING: Converting empty ConjoinedFacts to SDD")
                 
             result = value.evaluate(self._sdd_algebra)
-            print(f"SDD evaluation result: {result}")
+            #print(f"SDD evaluation result: {result}")
             
             # Add numerical safety checks
             if isinstance(result, torch.Tensor):

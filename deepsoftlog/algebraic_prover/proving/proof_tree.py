@@ -180,9 +180,9 @@ class ProofTree:
         self._proof_history.append((self.nb_steps, proof))
         
         # Debug output
-        print(f"Processing proof {id(proof)} with {len(proof.goals)} goals")
+        # print(f"Processing proof {id(proof)} with {len(proof.goals)} goals")
         if proof.goals:
-            print(f"  Current goals: {proof.goals}")
+            # print(f"  Current goals: {proof.goals}")
             # Check for object-only goals
             if all(g.functor == "object" for g in proof.goals):
                 print(f"  DIAGNOSTIC: All goals are object predicates - should complete soon")
@@ -195,12 +195,12 @@ class ProofTree:
         
         # Check completion
         if proof.is_complete():
-            print(f"COMPLETE PROOF FOUND: {proof.query} with {len(getattr(proof, 'goals', []))} goals")
+            # print(f"COMPLETE PROOF FOUND: {proof.query} with {len(getattr(proof, 'goals', []))} goals")
             self.answers.add(proof.query)
             self.proofs.append(proof)
             old_value = self.value
             self.value = self.algebra.add(self.value, proof.value)
-            print(f"  Value updated: {old_value} -> {self.value}")
+            # print(f"  Value updated: {old_value} -> {self.value}")
             return proof
 
         # Process children in usual way

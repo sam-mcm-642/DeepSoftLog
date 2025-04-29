@@ -77,12 +77,12 @@ class ProofModule:
                 
                 if result is not None:
                     unifier, new_facts = result
-                    print(f"DEBUG: Unifier: {unifier}")
+                    # print(f"DEBUG: Unifier: {unifier}")
                     if isinstance(fresh_db_clause, Expr):
                         new_clause = fresh_db_clause
                     else:
                         new_clause = fresh_db_clause.apply_substitution(unifier)
-                    print(f"DEBUG: Yielding match: {new_clause}")
+                    # print(f"DEBUG: Yielding match: {new_clause}")
                     yield new_clause, unifier, new_facts    
          
                     
@@ -191,14 +191,14 @@ class ProofModule:
         queue: Optional[ProofQueue] = None,
         return_stats: bool = False,
     ):
-        print(f"CALLED (SPL)")
+        # print(f"CALLED (SPL)")
         print(f"QUERY: {query}")
         self.queried = query
         if queue is None:
             queue = OrderedProofQueue(self.algebra)
-            print(f"Created new OrderedProofQueue with algebra: {type(self.algebra).__name__}")
+            # print(f"Created new OrderedProofQueue with algebra: {type(self.algebra).__name__}")
         
-        print(f"Starting proof search with max_proofs={max_proofs}, max_depth={max_depth}, max_branching={max_branching}")
+        # print(f"Starting proof search with max_proofs={max_proofs}, max_depth={max_depth}, max_branching={max_branching}")
         formulas, proof_steps, nb_proofs = get_proofs(
             self,
             self.algebra,
@@ -209,15 +209,15 @@ class ProofModule:
             max_branching=max_branching,
         )
         
-        print(f"Raw formulas returned: {formulas}")
-        print(f"Proof steps: {proof_steps}, Number of proofs: {nb_proofs}")
+        #print(f"Raw formulas returned: {formulas}")
+        #print(f"Proof steps: {proof_steps}, Number of proofs: {nb_proofs}")
         
         # Check for empty formulas
         if not formulas:
             print("WARNING: No formulas found in proof search")
         
         # Evaluate formulas
-        print("Evaluating formulas with algebra...")
+        # print("Evaluating formulas with algebra...")
         result = {}
         for k, f in formulas.items():
             eval_result = self.algebra.evaluate(f)
@@ -230,16 +230,17 @@ class ProofModule:
                 elif torch.isnan(eval_result):
                     print(f"CRITICAL: Formula {k} evaluated to NaN")
             
-            print(f"Formula {k}: {f} -> {eval_result}")
+            #print(f"Formula {k}: {f} -> {eval_result}")
         
         # Filter out zero results
         zero = self.algebra.eval_zero()
         filtered_result = {k: v for k, v in result.items() if v != zero}
         
         if len(result) != len(filtered_result):
-            print(f"Filtered out {len(result) - len(filtered_result)} zero results")
+            pass
+            # print(f"Filtered out {len(result) - len(filtered_result)} zero results")
         
-        print(f"Final result: {filtered_result}")
+        # print(f"Final result: {filtered_result}")
         
         if return_stats:
             return filtered_result, proof_steps, nb_proofs
@@ -256,6 +257,43 @@ class ProofModule:
     #     print(f"evaluate: {self.algebra.evaluate(self.algebra.zero())}")
     #     return self.algebra.evaluate(self.algebra.zero()), proof_steps,
     #     nb_proofs
+    
+    # def __call__(self, query: Expr, **kwargs):
+    #     result, proof_steps, nb_proofs = self.query(query, return_stats=True, **kwargs)
+    #     print(f"__call__ Result: {result}, type: {type(result)}")
+        
+    #     # Debug the original query and result keys
+    #     print(f"Original query: {query}")
+    #     print(f"Original query type: {type(query)}")
+        
+    #     if isinstance(result, dict) and result:
+    #         print("Result keys:")
+    #         for i, key in enumerate(result.keys()):
+    #             print(f"  Key {i}: {key}")
+    #             print(f"  Key {i} type: {type(key)}")
+                
+    #             # Additional checks that might help
+    #             if hasattr(key, 'functor'):
+    #                 print(f"  Key {i} functor: {key.functor}")
+    #             if hasattr(query, 'functor') and hasattr(key, 'functor'):
+    #                 print(f"  Functors match: {query.functor == key.functor}")
+                
+    #             # Compare string representations
+    #             print(f"  String match: {str(key) == str(query)}")
+                
+    #             # Try comparison after normalization
+    #             if hasattr(query, 'normalize') and hasattr(key, 'normalize'):
+    #                 print(f"  Normalized match: {query.normalize() == key.normalize()}")
+        
+    #     if type(result) is set:
+    #         return len(result) > 0.0, proof_steps, nb_proofs
+        
+    #     if type(result) is dict and query in result:
+    #         return result[query], proof_steps, nb_proofs
+        
+    #     print(f"evaluate: {self.algebra.evaluate(self.algebra.zero())}")
+    #     return self.algebra.evaluate(self.algebra.zero()), proof_steps, nb_proofs
+
     
     def __call__(self, query: Expr, **kwargs):
         result, proof_steps, nb_proofs = self.query(query, return_stats=True, **kwargs)
@@ -285,13 +323,19 @@ class ProofModule:
                     print(f"  Normalized match: {query.normalize() == key.normalize()}")
         
         if type(result) is set:
-            return len(result) > 0.0, proof_steps, nb_proofs
+            return_value = (len(result) > 0.0, proof_steps, nb_proofs)
+            print(f"Returning set result: {return_value[0]}, type: {type(return_value[0])}")
+            return return_value
         
         if type(result) is dict and query in result:
-            return result[query], proof_steps, nb_proofs
+            return_value = result[query]
+            print(f"Returning dict result: {return_value}, type: {type(return_value)}")
+            return return_value, proof_steps, nb_proofs
         
-        print(f"evaluate: {self.algebra.evaluate(self.algebra.zero())}")
-        return self.algebra.evaluate(self.algebra.zero()), proof_steps, nb_proofs
+        # This is the case we're interested in
+        zero_value = self.algebra.evaluate(self.algebra.zero())
+        print(f"No match found, returning: {zero_value}, type: {type(zero_value)}")
+        return zero_value, proof_steps, nb_proofs
         
     def eval(self):
         self.store = self.store.eval()
@@ -364,8 +408,8 @@ def get_proofs(prover, algebra, **kwargs) -> tuple[dict[Expr, Value], int, int]:
     print("Collecting proofs from proof tree...")
     for proof in proof_tree.get_proofs():
         print(f"Found proof: {proof.query}")
-        print(f"  Goals: {proof.goals}")
-        print(f"  Value: {proof.value}")
+        # print(f"  Goals: {proof.goals}")
+        # print(f"  Value: {proof.value}")
         
         proofs[proof.query] = algebra.add(proofs[proof.query], proof.value)
         nb_proofs += 1
@@ -395,8 +439,8 @@ def get_proofs(prover, algebra, **kwargs) -> tuple[dict[Expr, Value], int, int]:
                     print(f"    is_complete(): {p.is_complete()}")
                     
                     # Look for soft unifications that should allow completion
-                    if hasattr(p.value, 'pos_facts'):
-                        print(f"    Soft unifications: {p.value.pos_facts}")
+                    # if hasattr(p.value, 'pos_facts'):
+                    #     print(f"    Soft unifications: {p.value.pos_facts}")
     
     # Return the results as normal - no artificial fixes
     return dict(proofs), proof_tree.nb_steps, nb_proofs

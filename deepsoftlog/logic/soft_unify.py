@@ -403,7 +403,7 @@ def soft_mgu(term1: Expr, term2: Expr, store, metric, soft_cache=None) -> Option
                         del substitution[i]
                         changes = True
                         if len(soft_unifies) > 0:
-                            print(f"SOFT UNIFICATION FACTS: {soft_unifies}")
+                            # print(f"SOFT UNIFICATION FACTS: {soft_unifies}")
                             # Check probability values of soft facts
                             for fact in soft_unifies:
                                 if hasattr(fact, 'get_probability'):
@@ -431,7 +431,7 @@ def soft_mgu(term1: Expr, term2: Expr, store, metric, soft_cache=None) -> Option
             result_dict[k] = v
     
     print(f"Final substitution: {result_dict}")
-    print(f"Soft unifies: {soft_unifies}")
+    # print(f"Soft unifies: {soft_unifies}")
     return result_dict, soft_unifies
 
 ###NEWEST VERSION

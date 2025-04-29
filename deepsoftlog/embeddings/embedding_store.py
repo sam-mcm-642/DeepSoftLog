@@ -66,23 +66,47 @@ class EmbeddingStore(nn.Module):
     #     return self._cache[sign]
     
 
+    # def forward(self, term: Expr):
+    #     assert term.get_predicate() != ("~", 1), \
+    #         f"Cannot embed embedded term `{term}`."
+    #     if term.get_arity() == 0:
+    #         e = self._embed_constant(term)
+    #     else:
+    #         e = self._embed_functor(term)
+    #     return e
+    
+
+    # def _embed_constant(self, term: Expr):
+    #     if isinstance(term, TensorTerm):
+    #         return term.get_tensor().to(self.device)
+
+    #     # for name, param in self.constant_embeddings.items():
+    #     #     print(f"{name}: {param.data}")
+
+    #     name = term.functor
+    #     return self.constant_embeddings[name]
+    
     def forward(self, term: Expr):
+        """Forward method that handles missing embeddings during runtime"""
         assert term.get_predicate() != ("~", 1), \
             f"Cannot embed embedded term `{term}`."
+        
         if term.get_arity() == 0:
-            e = self._embed_constant(term)
+            return self._embed_constant(term)
         else:
-            e = self._embed_functor(term)
-        return e
+            return self._embed_functor(term)
 
     def _embed_constant(self, term: Expr):
         if isinstance(term, TensorTerm):
             return term.get_tensor().to(self.device)
 
-        # for name, param in self.constant_embeddings.items():
-        #     print(f"{name}: {param.data}")
-
         name = term.functor
+        
+        # Create embedding if it doesn't exist
+        if name not in self.constant_embeddings:
+            print(f"Creating new embedding for term: {name}")
+            self.constant_embeddings[name] = self.initializer(name)
+        
         return self.constant_embeddings[name]
 
     def _embed_functor(self, functor: Expr):

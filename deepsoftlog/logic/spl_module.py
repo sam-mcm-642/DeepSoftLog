@@ -44,10 +44,67 @@ class SoftProofModule(ProofModule):
     #     print(f"Super query: {super().query(*args, **kwargs)}")
     #     return super().query(*args, **kwargs)
     
+    
+    def __call__(self, query: Expr, groundtruth_object=None, **kwargs):
+        """
+        Execute a query and find its result, properly handling variable unification.
+        """
+        result, proof_steps, nb_proofs = self.query(query, return_stats=True, **kwargs)
+        print(f"__call__ Result: {result}, type: {type(result)}")
+        
+        if type(result) is set:
+            return len(result) > 0.0, proof_steps, nb_proofs
+        
+        if type(result) is dict:
+            # 1. Direct match (if query is already in results)
+            if query in result:
+                print(f"Found direct match for query")
+                return result[query], proof_steps, nb_proofs
+                
+            # 2. Try groundtruth unification if provided
+            if groundtruth_object is not None and hasattr(query, 'all_variables') and query.all_variables():
+                # Get the variable 'X' (or first variable)
+                variables = list(query.all_variables())
+                if variables:
+                    var_x = variables[0]
+                    # Create a substitution to replace X with groundtruth
+                    substitution = {var_x: Expr(str(groundtruth_object))}
+                    # Apply the substitution to create a modified query
+                    modified_query = query.apply_substitution(substitution)
+                    print(f"Looking for groundtruth-unified query: {modified_query}")
+                    
+                    # Check if this modified query exists in results
+                    if modified_query in result:
+                        print(f"Found match for groundtruth-unified query")
+                        return result[modified_query], proof_steps, nb_proofs
+                        
+                    # If no exact match, check for structural match
+                    for key, value in result.items():
+                        print(f"Comparing with result key: {key}")
+                        # Check if they have the same structure (regardless of variable names)
+                        if (str(groundtruth_object) in str(key) and
+                            hasattr(key, 'functor') and hasattr(query, 'functor') and 
+                            key.functor == query.functor):
+                            print(f"Found structural match with groundtruth: {key}")
+                            return value, proof_steps, nb_proofs
+            
+            # 3. Check for any result with the same base structure (fallback)
+            for key, value in result.items():
+                if hasattr(key, 'functor') and hasattr(query, 'functor') and key.functor == query.functor:
+                    print(f"Found fallback match: {key}")
+                    tensor_value = torch.tensor(value, requires_grad=True) if not isinstance(value, torch.Tensor) else value
+                    if not tensor_value.requires_grad:
+                        tensor_value = tensor_value.detach().clone().requires_grad_(True)
+                    return tensor_value, proof_steps, nb_proofs
+        
+        # No match found - return a tensor with requires_grad=True
+        print(f"No match found, returning tensor with requires_grad=True")
+        return torch.tensor(-20.0, requires_grad=True), proof_steps, nb_proofs
+    
     def query(self, *args, **kwargs):
         print(f"QUERY CALLED: {args[0] if args else None}")
         print(f"Algebra type: {type(self.algebra).__name__}")
-        print(self.store)
+        #print(self.store)
         
         # Capture original query before any transformation
         original_query = args[0] if args else None

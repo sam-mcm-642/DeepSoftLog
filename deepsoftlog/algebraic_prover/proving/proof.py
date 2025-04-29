@@ -37,18 +37,18 @@ class Proof:
         is_goals_empty = len(self.goals) == 0
         
         # Diagnostic info
-        if hasattr(self, 'query'):
-            print(f"is_complete check for proof with query {self.query}:")
-            print(f"  Goals empty: {is_goals_empty}")
-            print(f"  Goals: {self.goals}")
-            print(f"  Value type: {type(self.value)}")
+        # if hasattr(self, 'query'):
+        #     print(f"is_complete check for proof with query {self.query}:")
+        #     print(f"  Goals empty: {is_goals_empty}")
+        #     print(f"  Goals: {self.goals}")
+        #     print(f"  Value type: {type(self.value)}")
             
-            # Check special case of object-only goals
-            if self.goals and all(g.functor == "object" for g in self.goals):
-                print(f"  SPECIAL CASE: All goals are object predicates")
-                if hasattr(self.value, 'pos_facts'):
-                    print(f"  Value has soft facts: {bool(self.value.pos_facts)}")
-                    print(f"  Soft facts: {self.value.pos_facts}")
+        #     # Check special case of object-only goals
+        #     if self.goals and all(g.functor == "object" for g in self.goals):
+        #         print(f"  SPECIAL CASE: All goals are object predicates")
+        #         if hasattr(self.value, 'pos_facts'):
+        #             print(f"  Value has soft facts: {bool(self.value.pos_facts)}")
+        #             print(f"  Soft facts: {self.value.pos_facts}")
         
         return is_goals_empty
 
@@ -204,7 +204,7 @@ class Proof:
                 # This is where we need to understand why these aren't being completed
                 print(f"DIAGNOSTIC: Trace of goals, value and completion status:")
                 print(f"  Goals: {self.goals}")
-                print(f"  Value: {self.value}")
+                # print(f"  Value: {self.value}")
                 print(f"  is_complete(): {self.is_complete()}")
                 if hasattr(self, 'get_child'):
                     # Generate a child with empty goals for analysis
