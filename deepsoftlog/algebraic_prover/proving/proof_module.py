@@ -223,12 +223,12 @@ class ProofModule:
             eval_result = self.algebra.evaluate(f)
             result[k] = eval_result
             
-            # Check for numerical issues
-            if isinstance(eval_result, torch.Tensor):
-                if torch.isneginf(eval_result):
-                    print(f"CRITICAL: Formula {k} evaluated to -inf")
-                elif torch.isnan(eval_result):
-                    print(f"CRITICAL: Formula {k} evaluated to NaN")
+            # # Check for numerical issues
+            # if isinstance(eval_result, torch.Tensor):
+            #     if torch.isneginf(eval_result):
+            #         print(f"CRITICAL: Formula {k} evaluated to -inf")
+            #     elif torch.isnan(eval_result):
+            #         print(f"CRITICAL: Formula {k} evaluated to NaN")
             
             #print(f"Formula {k}: {f} -> {eval_result}")
         
@@ -297,44 +297,44 @@ class ProofModule:
     
     def __call__(self, query: Expr, **kwargs):
         result, proof_steps, nb_proofs = self.query(query, return_stats=True, **kwargs)
-        print(f"__call__ Result: {result}, type: {type(result)}")
+        # print(f"__call__ Result: {result}, type: {type(result)}")
         
         # Debug the original query and result keys
-        print(f"Original query: {query}")
-        print(f"Original query type: {type(query)}")
+        # print(f"Original query: {query}")
+        # print(f"Original query type: {type(query)}")
         
-        if isinstance(result, dict) and result:
-            print("Result keys:")
-            for i, key in enumerate(result.keys()):
-                print(f"  Key {i}: {key}")
-                print(f"  Key {i} type: {type(key)}")
+        # if isinstance(result, dict) and result:
+        #     # print("Result keys:")
+        #     for i, key in enumerate(result.keys()):
+                # print(f"  Key {i}: {key}")
+                # print(f"  Key {i} type: {type(key)}")
                 
-                # Additional checks that might help
-                if hasattr(key, 'functor'):
-                    print(f"  Key {i} functor: {key.functor}")
-                if hasattr(query, 'functor') and hasattr(key, 'functor'):
-                    print(f"  Functors match: {query.functor == key.functor}")
+                # # Additional checks that might help
+                # if hasattr(key, 'functor'):
+                #     # print(f"  Key {i} functor: {key.functor}")
+                # if hasattr(query, 'functor') and hasattr(key, 'functor'):
+                #     print(f"  Functors match: {query.functor == key.functor}")
                 
                 # Compare string representations
-                print(f"  String match: {str(key) == str(query)}")
+                # print(f"  String match: {str(key) == str(query)}")
                 
                 # Try comparison after normalization
-                if hasattr(query, 'normalize') and hasattr(key, 'normalize'):
-                    print(f"  Normalized match: {query.normalize() == key.normalize()}")
+                # if hasattr(query, 'normalize') and hasattr(key, 'normalize'):
+                #     print(f"  Normalized match: {query.normalize() == key.normalize()}")
         
         if type(result) is set:
             return_value = (len(result) > 0.0, proof_steps, nb_proofs)
-            print(f"Returning set result: {return_value[0]}, type: {type(return_value[0])}")
+            # print(f"Returning set result: {return_value[0]}, type: {type(return_value[0])}")
             return return_value
         
         if type(result) is dict and query in result:
             return_value = result[query]
-            print(f"Returning dict result: {return_value}, type: {type(return_value)}")
+            # print(f"Returning dict result: {return_value}, type: {type(return_value)}")
             return return_value, proof_steps, nb_proofs
         
         # This is the case we're interested in
         zero_value = self.algebra.evaluate(self.algebra.zero())
-        print(f"No match found, returning: {zero_value}, type: {type(zero_value)}")
+        # print(f"No match found, returning: {zero_value}, type: {type(zero_value)}")
         return zero_value, proof_steps, nb_proofs
         
     def eval(self):
@@ -398,7 +398,7 @@ class ProbabilisticProofModule(ProofModule):
 #     return dict(proofs), proof_tree.nb_steps, nb_proofs
 
 def get_proofs(prover, algebra, **kwargs) -> tuple[dict[Expr, Value], int, int]:
-    print(f"get_proofs called with kwargs: {kwargs}")
+    # print(f"get_proofs called with kwargs: {kwargs}")
     
     # Create and run proof tree
     proof_tree = ProofTree(prover, algebra=algebra, **kwargs)
@@ -407,36 +407,36 @@ def get_proofs(prover, algebra, **kwargs) -> tuple[dict[Expr, Value], int, int]:
     
     print("Collecting proofs from proof tree...")
     for proof in proof_tree.get_proofs():
-        print(f"Found proof: {proof.query}")
+        # print(f"Found proof: {proof.query}")
         # print(f"  Goals: {proof.goals}")
         # print(f"  Value: {proof.value}")
         
         proofs[proof.query] = algebra.add(proofs[proof.query], proof.value)
         nb_proofs += 1
     
-    print(f"Proof collection complete: {nb_proofs} proofs in {proof_tree.nb_steps} steps")
+    # print(f"Proof collection complete: {nb_proofs} proofs in {proof_tree.nb_steps} steps")
     
     # Check if no proofs found
     if nb_proofs == 0:
-        print("WARNING: No proofs found in proof tree")
-        print(f"Proof tree stats:")
-        print(f"  Steps: {proof_tree.nb_steps}")
-        print(f"  Answers: {proof_tree.answers}")
-        print(f"  Value: {proof_tree.value}")
+        # print("WARNING: No proofs found in proof tree")
+        # print(f"Proof tree stats:")
+        # print(f"  Steps: {proof_tree.nb_steps}")
+        # print(f"  Answers: {proof_tree.answers}")
+        # print(f"  Value: {proof_tree.value}")
         
         # Check for incomplete proofs with only object predicates
         if hasattr(proof_tree, '_proof_history'):
             near_complete = [p for _, p in proof_tree._proof_history 
                            if p.goals and all(g.functor == "object" for g in p.goals)]
             
-            if near_complete:
-                print(f"Found {len(near_complete)} proofs with only object predicates:")
-                for i, p in enumerate(near_complete[:3]):  # Show at most 3
-                    print(f"  Near-complete proof {i}:")
-                    print(f"    Query: {p.query}")
-                    print(f"    Goals: {p.goals}")
-                    print(f"    Value: {p.value}")
-                    print(f"    is_complete(): {p.is_complete()}")
+            # if near_complete:
+            #     # print(f"Found {len(near_complete)} proofs with only object predicates:")
+            #     for i, p in enumerate(near_complete[:3]):  # Show at most 3
+                    # print(f"  Near-complete proof {i}:")
+                    # print(f"    Query: {p.query}")
+                    # print(f"    Goals: {p.goals}")
+                    # print(f"    Value: {p.value}")
+                    # print(f"    is_complete(): {p.is_complete()}")
                     
                     # Look for soft unifications that should allow completion
                     # if hasattr(p.value, 'pos_facts'):

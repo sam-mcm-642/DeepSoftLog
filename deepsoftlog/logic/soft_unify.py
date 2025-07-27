@@ -409,7 +409,8 @@ def soft_mgu(term1: Expr, term2: Expr, store, metric, soft_cache=None) -> Option
                                 if hasattr(fact, 'get_probability'):
                                     prob = fact.get_probability()
                                     if prob < 0.001:
-                                        print(f"WARNING: Very small soft unification probability: {prob}")
+                                        pass
+                                        # print(f"WARNING: Very small soft unification probability: {prob}")
                         break
                     else:
                         raise Exception(f"Soft unification of non-ground terms `{s_inner}` and `{t_inner}` is illegal")
@@ -430,7 +431,7 @@ def soft_mgu(term1: Expr, term2: Expr, store, metric, soft_cache=None) -> Option
         if isinstance(k, Variable):
             result_dict[k] = v
     
-    print(f"Final substitution: {result_dict}")
+    # print(f"Final substitution: {result_dict}")
     # print(f"Soft unifies: {soft_unifies}")
     return result_dict, soft_unifies
 

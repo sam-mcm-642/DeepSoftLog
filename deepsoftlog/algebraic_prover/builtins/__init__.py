@@ -239,15 +239,15 @@ class TypeExternal(External):
         """
         Debug instrumented version to track gradient flow
         """
-        print("\n=== TypeExternal.get_answers called ===")
-        print(f"t1: {t1}, t2: {t2}")
+        # print("\n=== TypeExternal.get_answers called ===")
+        # print(f"t1: {t1}, t2: {t2}")
         
         store = self.store_getter()
         
         # Extract inner terms if they're soft terms
         t1_inner = t1.arguments[0] if hasattr(t1, 'arguments') and is_soft(t1) else t1
         t2_inner = t2.arguments[0] if hasattr(t2, 'arguments') and is_soft(t2) else t2
-        print(f"Inner terms: t1_inner={t1_inner}, t2_inner={t2_inner}")
+        # print(f"Inner terms: t1_inner={t1_inner}, t2_inner={t2_inner}")
         
         # Default to a high log probability for identical terms
         log_score = 0.0  # log(1.0) = 0.0
@@ -256,18 +256,18 @@ class TypeExternal(External):
         if t1_inner != t2_inner:
             try:
                 # Track embedding retrieval
-                print(f"Getting embeddings for {t1_inner} and {t2_inner}")
+                # print(f"Getting embeddings for {t1_inner} and {t2_inner}")
                 
                 # Get the log similarity score
-                print("Calling soft_unify_score...")
+                # print("Calling soft_unify_score...")
                 log_score = store.soft_unify_score(t1_inner, t2_inner, self.metric)
-                print(f"Received log_score: {log_score}")
-                print(f"log_score type: {type(log_score)}")
+                # print(f"Received log_score: {log_score}")
+                # print(f"log_score type: {type(log_score)}")
                 if isinstance(log_score, torch.Tensor):
                     print(f"log_score requires_grad: {log_score.requires_grad}")
                     
             except Exception as e:
-                print(f"Error calculating soft unification: {e}")
+                # print(f"Error calculating soft unification: {e}")
                 log_score = -5.0  # Fallback
         
         # Create the fact expression
@@ -285,8 +285,8 @@ class TypeExternal(External):
         print(f"Created soft_fact: {soft_fact}")
         if hasattr(soft_fact, 'get_log_probability'):
             log_prob = soft_fact.get_log_probability()
-            print(f"soft_fact log_probability: {log_prob}")
-            print(f"log_prob type: {type(log_prob)}")
+            # print(f"soft_fact log_probability: {log_prob}")
+            # print(f"log_prob type: {type(log_prob)}")
             if isinstance(log_prob, torch.Tensor):
                 print(f"log_prob requires_grad: {log_prob.requires_grad}")
         

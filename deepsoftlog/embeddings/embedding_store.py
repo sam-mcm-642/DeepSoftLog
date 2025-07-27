@@ -25,7 +25,7 @@ class EmbeddingStore(nn.Module):
         self.initializer = initializer
         self.vocabulary = vocabulary
 
-        print("- Initializing embeddings with vocabulary:", vocabulary)
+        # print("- Initializing embeddings with vocabulary:", vocabulary)
         self.constant_embeddings = nn.ParameterDict()
         for name in vocabulary.get_constants():
             self.constant_embeddings[name] = initializer(name)
@@ -102,9 +102,13 @@ class EmbeddingStore(nn.Module):
 
         name = term.functor
         
+        if '.' in name or name in ['cpu', 'cuda', 'to']:
+            # Return a default embedding for problematic constants
+            return torch.zeros(self.ndim).to(self.device)
+        
         # Create embedding if it doesn't exist
         if name not in self.constant_embeddings:
-            print(f"Creating new embedding for term: {name}")
+            # print(f"Creating new embedding for term: {name}")
             self.constant_embeddings[name] = self.initializer(name)
         
         return self.constant_embeddings[name]

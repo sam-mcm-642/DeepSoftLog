@@ -50,7 +50,7 @@ class SoftProofModule(ProofModule):
         Execute a query and find its result, properly handling variable unification.
         """
         result, proof_steps, nb_proofs = self.query(query, return_stats=True, **kwargs)
-        print(f"__call__ Result: {result}, type: {type(result)}")
+        # print(f"__call__ Result: {result}, type: {type(result)}")
         
         if type(result) is set:
             return len(result) > 0.0, proof_steps, nb_proofs
@@ -103,7 +103,7 @@ class SoftProofModule(ProofModule):
     
     def query(self, *args, **kwargs):
         print(f"QUERY CALLED: {args[0] if args else None}")
-        print(f"Algebra type: {type(self.algebra).__name__}")
+        # print(f"Algebra type: {type(self.algebra).__name__}")
         #print(self.store)
         
         # Capture original query before any transformation
@@ -131,23 +131,23 @@ class SoftProofModule(ProofModule):
         else:
             result_dict, proof_steps, nb_proofs = super().query(*args, return_stats=True, **kwargs)
         
-        print(f"Query result stats:")
-        print(f"  Proof steps: {proof_steps}")
-        print(f"  Number of proofs: {nb_proofs}")
-        print(f"  Result type: {type(result_dict)}")
+        # print(f"Query result stats:")
+        # print(f"  Proof steps: {proof_steps}")
+        # print(f"  Number of proofs: {nb_proofs}")
+        # print(f"  Result type: {type(result_dict)}")
         
         if isinstance(result_dict, dict):
             print(f"  Result keys: {list(result_dict.keys())}")
             for k, v in result_dict.items():
                 print(f"  {k}: {v}")
         
-        # Log whether the query itself was found in the results
-        if isinstance(result_dict, dict) and original_query is not None:
-            if original_query in result_dict:
-                print(f"Query found in results with value: {result_dict[original_query]}")
-            else:
-                print(f"WARNING: Query not found in results")
-                print(f"Available keys: {list(result_dict.keys())}")
+        # # Log whether the query itself was found in the results
+        # if isinstance(result_dict, dict) and original_query is not None:
+        #     if original_query in result_dict:
+        #         print(f"Query found in results with value: {result_dict[original_query]}")
+        #     else:
+        #         print(f"WARNING: Query not found in results")
+        #         print(f"Available keys: {list(result_dict.keys())}")
         
         # Return the appropriate result
         if 'return_stats' in kwargs and kwargs['return_stats']:
@@ -181,53 +181,48 @@ class SoftProofModule(ProofModule):
     
 
     def update_clauses(self, DataInstance):
-        # Make a copy of the set for iteration
-        clauses_copy = list(self.clauses)  # Convert to list to avoid set iteration issues
-
-        # Filter out the "scene_graph" clauses, considering the rule structure
+        """Update clauses with scene graph, simply skipping any problematic constants."""
+        # Filter existing clauses
         filtered_clauses = []
-        
-        # Define exceptions - rules to keep despite having filtered functors
-        exceptions = ["~rr1"]  # Add any other special relations here
-        
-        for expr in clauses_copy:
-            if expr.functor == ":-":  # It's a rule or fact-as-rule
-                head = expr.arguments[0]  # Get the head of the rule
-                
-                # Check if this is either not a filtered functor OR it's in our exceptions
-                if (head.functor not in ["scene_graph", "object", "groundtruth"] or
-                    (hasattr(head, "arguments") and len(head.arguments) > 0 and 
-                    str(head.arguments[0]) in exceptions)):
+        for expr in list(self.clauses):
+            if expr.functor == ":-":  # It's a rule
+                head = expr.arguments[0]
+                if head.functor not in ["scene_graph", "object", "groundtruth"]:
                     filtered_clauses.append(expr)
-                    
-            else:  # It's a simple expression (not a rule)
-                if expr.functor not in ["scene_graph", "object", "groundtruth"]:
-                    filtered_clauses.append(expr)
+            elif expr.functor not in ["scene_graph", "object", "groundtruth"]:
+                filtered_clauses.append(expr)
 
-        # Now you can update the clauses with the filtered list
-        self.clauses.clear()  # Clear the existing clauses
-        self.clauses.update(set(filtered_clauses))  # Add the filtered clauses
-
-        # Optionally, update the store and vocabulary
+        # Update clauses
+        self.clauses.clear()
+        self.clauses.update(set(filtered_clauses))
+        
+        # Add new scene graph
         sg_clauses = sg_to_prolog(DataInstance)
         sg_clauses = normalize_clauses(sg_clauses)        
-
-        self.clauses.update(sg_clauses)  # Add new clauses from the current instance
-        updated_vocabulary = Vocabulary().add_all(self.clauses)
+        self.clauses.update(sg_clauses)
         
-        # Update the store's vocabulary
+        # Update vocabulary
+        updated_vocabulary = Vocabulary().add_all(self.clauses)
         self.get_store().vocabulary = updated_vocabulary
         
-        # Initialize embeddings for new constants
+        # Add embeddings for new constants, skipping problematic ones
         for constant in updated_vocabulary.get_constants():
+            # Skip if contains dots or is a reserved name
+            if '.' in constant or constant in ['cpu', 'cuda', 'to']:
+                print(f"Skipping problematic constant: {constant}")
+                continue
+                
+            # Add embedding if not already present
             if constant not in self.get_store().constant_embeddings:
-                print(f"Initializing new embedding for unseen constant: {constant}")
-                self.get_store().constant_embeddings[constant] = self.get_store().initializer(constant)
+                print(f"Initializing embedding for: {constant}")
+                try:
+                    self.get_store().constant_embeddings[constant] = self.get_store().initializer(constant)
+                except Exception as e:
+                    print(f"Couldn't add embedding for {constant}, skipping")
         
-        # Clear the cache to ensure fresh computations
+        # Clear cache
         self.get_store().clear_cache()
-        
-        print(f"Updated clauses and constant embeddings successfully")
+
             
     def analyze_failed_proof(self, query: Expr):
         """Special function to analyze why a proof is failing"""
@@ -396,10 +391,6 @@ class DebugSoftProofModule(SoftProofModule):
                     else:
                         new_clause = working_clause.apply_substitution(unifier)
                     
-                    if self.debug:
-                        print(f"DEBUG: Match found!")
-                        print(f"DEBUG: Unifier: {unifier}")
-                        print(f"DEBUG: New clause: {new_clause}")
                     
                     yield new_clause, unifier, new_facts
 

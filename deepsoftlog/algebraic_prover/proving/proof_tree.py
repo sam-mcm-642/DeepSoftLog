@@ -52,7 +52,7 @@ class ProofTree:
     
     ##3.7 thinking version
     def _create_proof_for(self, query: Expr):
-        print(f"Proof: {ProofDebug(query=query, proof_tree=self, value=self.algebra.one())}")
+        # print(f"Proof: {ProofDebug(query=query, proof_tree=self, value=self.algebra.one())}")
         return ProofDebug(query=query, proof_tree=self, value=self.algebra.one(), bindings={})
 
     def is_complete(self) -> bool:
@@ -77,13 +77,13 @@ class ProofTree:
             
             # Check the queue for proofs very close to completion (with only object goals)
             if self.queue.empty() and not self.proofs:
-                print("No proofs found but queue is empty - checking for near-complete proofs")
+                # print("No proofs found but queue is empty - checking for near-complete proofs")
                 # Scan all attempted proofs for ones with only object predicates left
                 if hasattr(self, '_attempted_proofs') and self._attempted_proofs:
                     for p in self._attempted_proofs:
                         if (p.goals and all(g.functor == "object" for g in p.goals) and 
                             isinstance(p.value, ConjoinedFacts) and p.value.pos_facts):
-                            print(f"FORCE COMPLETING PROOF: {p.query} with {len(p.goals)} object goals")
+                            # print(f"FORCE COMPLETING PROOF: {p.query} with {len(p.goals)} object goals")
                             empty_goal_proof = Proof(
                                 query=p.query,
                                 goals=tuple(),  # Empty goals = completed
@@ -102,8 +102,8 @@ class ProofTree:
         
         # Final check - did we find any proofs?
         if not self.proofs and self.nb_steps > 10:
-            print("WARNING: No proofs found after significant search - debugging info:")
-            print(f"Attempted {attempts} proof steps")
+            # print("WARNING: No proofs found after significant search - debugging info:")
+            # print(f"Attempted {attempts} proof steps")
             # Print any proof that made it far in the process
             if hasattr(self, '_attempted_proofs') and self._attempted_proofs:
                 for i, p in enumerate(self._attempted_proofs[-5:]):
@@ -161,7 +161,7 @@ class ProofTree:
     
     def step(self) -> Optional[Proof]:
         """Enhanced step method with diagnostic tracing"""
-        print(f"STEP [{self.nb_steps}]: Queue size={len(self.queue._queue) if hasattr(self.queue, '_queue') else '?'}")
+        # print(f"STEP [{self.nb_steps}]: Queue size={len(self.queue._queue) if hasattr(self.queue, '_queue') else '?'}")
         
         self.nb_steps += 1
         if len(self.incomplete_sub_trees):
@@ -169,7 +169,7 @@ class ProofTree:
 
         # Get next proof to consider
         if self.queue.empty():
-            print("Queue is empty - no more proofs to process")
+            # print("Queue is empty - no more proofs to process")
             return None
             
         proof = self.queue.next()
@@ -180,18 +180,19 @@ class ProofTree:
         self._proof_history.append((self.nb_steps, proof))
         
         # Debug output
-        # print(f"Processing proof {id(proof)} with {len(proof.goals)} goals")
-        if proof.goals:
-            # print(f"  Current goals: {proof.goals}")
-            # Check for object-only goals
-            if all(g.functor == "object" for g in proof.goals):
-                print(f"  DIAGNOSTIC: All goals are object predicates - should complete soon")
-                # Check if there are soft unifications available
-                if hasattr(proof.value, 'pos_facts') and proof.value.pos_facts:
-                    print(f"  DIAGNOSTIC: Proof has soft unifications: {proof.value.pos_facts}")
-                    print(f"  DIAGNOSTIC: is_complete() says: {proof.is_complete()}")
-        else:
-            print("  No goals - proof should be complete")
+        # # print(f"Processing proof {id(proof)} with {len(proof.goals)} goals")
+        # if proof.goals:
+        #     # print(f"  Current goals: {proof.goals}")
+        #     # Check for object-only goals
+        #     if all(g.functor == "object" for g in proof.goals):
+        #         # print(f"  DIAGNOSTIC: All goals are object predicates - should complete soon")
+        #         # Check if there are soft unifications available
+        #         if hasattr(proof.value, 'pos_facts') and proof.value.pos_facts:
+        #             pass
+        #             # print(f"  DIAGNOSTIC: Proof has soft unifications: {proof.value.pos_facts}")
+        #             # print(f"  DIAGNOSTIC: is_complete() says: {proof.is_complete()}")
+        # # else:
+        #     # print("  No goals - proof should be complete")
         
         # Check completion
         if proof.is_complete():

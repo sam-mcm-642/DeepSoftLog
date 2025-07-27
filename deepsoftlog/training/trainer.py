@@ -199,35 +199,35 @@ class Trainer:
                         print(f"Error processing key {key}: {e}")
         
         # Check embedding parameters and their gradients
-        print("\nEMBEDDING PARAMETER CHECK:")
-        for term in ['dog', 'cat', 'animal']:
-            try:
-                if term in self.program.store.constant_embeddings:
-                    emb = self.program.store.constant_embeddings[term]
-                    print(f"  {term}:")
-                    print(f"    Type: {type(emb)}")
-                    print(f"    Requires grad: {emb.requires_grad}")
-                    print(f"    Has grad: {emb.grad is not None}")
+        # print("\nEMBEDDING PARAMETER CHECK:")
+        # for term in ['dog', 'cat', 'animal']:
+        #     try:
+        #         if term in self.program.store.constant_embeddings:
+        #             emb = self.program.store.constant_embeddings[term]
+        #             print(f"  {term}:")
+        #             print(f"    Type: {type(emb)}")
+        #             print(f"    Requires grad: {emb.requires_grad}")
+        #             print(f"    Has grad: {emb.grad is not None}")
                     
-                    # Show gradient info if available
-                    if emb.grad is not None:
-                        print(f"    Grad norm: {torch.norm(emb.grad).item()}")
-                        print(f"    Grad mean: {emb.grad.mean().item()}")
+        #             # Show gradient info if available
+        #             if emb.grad is not None:
+        #                 print(f"    Grad norm: {torch.norm(emb.grad).item()}")
+        #                 print(f"    Grad mean: {emb.grad.mean().item()}")
                     
-                    # Fix embeddings that don't require gradients
-                    if not emb.requires_grad:
-                        print(f"  WARNING: {term} embedding doesn't require gradients!")
-                        self.program.store.constant_embeddings[term].requires_grad_(True)
-                        print(f"  Set requires_grad=True for {term}")
-                else:
-                    print(f"  {term}: Not found in constant_embeddings")
-            except Exception as e:
-                print(f"  Error checking {term}: {e}")
+        #             # Fix embeddings that don't require gradients
+        #             if not emb.requires_grad:
+        #                 print(f"  WARNING: {term} embedding doesn't require gradients!")
+        #                 self.program.store.constant_embeddings[term].requires_grad_(True)
+        #                 print(f"  Set requires_grad=True for {term}")
+        #         else:
+        #             print(f"  {term}: Not found in constant_embeddings")
+        #     except Exception as e:
+        #         print(f"  Error checking {term}: {e}")
         
-        # Print summary of findings
-        print("\nSOFT UNIFICATION SUMMARY:")
-        for key, prob in all_soft_unifs.items():
-            print(f"  {key}: {prob}")
+        # # Print summary of findings
+        # print("\nSOFT UNIFICATION SUMMARY:")
+        # for key, prob in all_soft_unifs.items():
+        #     print(f"  {key}: {prob}")
         
         return all_soft_unifs
 
@@ -290,10 +290,10 @@ class Trainer:
                 total_params += 1
                 if not hasattr(param, 'grad') or param.grad is None:
                     params_without_grad += 1
-                    print(f"Embedding {name} has no gradient")
+                    # print(f"Embedding {name} has no gradient")
                 else:
                     grad_norm = torch.norm(param.grad).item()
-                    print(f"Embedding {name} - grad norm: {grad_norm:.6f}")
+                    # print(f"Embedding {name} - grad norm: {grad_norm:.6f}")
         
         # Check all parameters using the parameters() method
         try:
@@ -433,16 +433,7 @@ class Trainer:
                 else:
                     print(f"    No query attribute found. Instance attributes: {dir(instance)}")
         
-        # Print current embeddings
-        if hasattr(self.program.store, 'constant_embeddings'):
-            print("\n=== CURRENT EMBEDDINGS ===")
-            for term1 in ['cat', 'dog', 'animal']:
-                for term2 in ['cat', 'dog', 'animal']:
-                    if term1 != term2 and term1 in self.program.store.constant_embeddings and term2 in self.program.store.constant_embeddings:
-                        emb1 = self.program.store.constant_embeddings[term1]
-                        emb2 = self.program.store.constant_embeddings[term2]
-                        sim = F.cosine_similarity(emb1, emb2, dim=0).item()
-                        print(f"  {term1}-{term2} similarity: {sim:.6f}")
+
 
     # def train_epoch(self, verbose: bool):
     #     """Training epoch with proper handling of DatasetInstance objects"""
@@ -649,88 +640,6 @@ class Trainer:
         print("EPOCH END")
     
     
-    # def train_epoch(self, verbose: bool):
-    #     # Clear the soft unification cache at the start of the epoch
-    #     if hasattr(self.program, 'soft_unification_cache'):
-    #         self.program.soft_unification_cache = {}
-        
-    #     for queries in tqdm(self.train_dataset, leave=False, smoothing=0, disable=not verbose):
-    #         current_time = time()
-            
-    #         # Clear the cache before each batch too (to be safe)
-    #         if hasattr(self.program, 'soft_unification_cache'):
-    #             self.program.soft_unification_cache = {}
-            
-    #         # Get debug info before optimization
-    #         debug_info = {}
-    #         if hasattr(self.program.store, 'constant_embeddings'):
-    #             # Try to get debug info for each pair
-    #             term_pairs = [('dog', 'animal'), ('cat', 'animal')]
-    #             for term1, term2 in term_pairs:
-    #                 try:
-    #                     debug_info[f"{term1}_{term2}"] = get_embedding_debug_info(
-    #                         self.program.store, term1, term2
-    #                     )
-    #                 except (AttributeError, KeyError):
-    #                     debug_info[f"{term1}_{term2}"] = None
-            
-            
-    #         loss, diff, proof_steps, nb_proofs = self.get_loss(queries)
-    #         try:
-    #             # Extract the last query result from your program
-    #             # This assumes the most recent query result is accessible - adjust if needed
-    #             if hasattr(self.program, 'last_query_result'):
-    #                 proof_result = self.program.last_query_result
-    #                 soft_unifs = self.check_soft_unifications_in_proof(proof_result)
-    #                 print("\nSoft unifications in proof:")
-    #                 for key, prob in soft_unifs.items():
-    #                     print(f"  {key}: probability={prob:.6f}")
-    #         except Exception as e:
-    #             print(f"Error tracking soft unifications: {e}")
-            
-            
-    #         grad_norm = 0.
-    #         if loss is not None:
-    #             grad_norm = self.step_optimizer()
-    #         if verbose:
-    #             self.logger.log({
-    #                 'grad_norm': grad_norm,
-    #                 'loss': loss,
-    #                 'diff': diff,
-    #                 "step_time": time() - current_time,
-    #                 "proof_steps": proof_steps,
-    #                 "nb_proofs": nb_proofs,
-    #             })
-            
-    #         # After optimization step
-    #         if hasattr(self.program.store, 'constant_embeddings'):
-    #             for term1, term2 in term_pairs:
-    #                 if debug_info[f"{term1}_{term2}"] is not None:
-    #                     try:
-    #                         emb1_after = self.program.store.constant_embeddings[term1].clone().detach()
-    #                         emb2_after = self.program.store.constant_embeddings[term2].clone().detach()
-                            
-    #                         # Get before values
-    #                         emb1_before = debug_info[f"{term1}_{term2}"]["emb1_before"]
-    #                         emb2_before = debug_info[f"{term1}_{term2}"]["emb2_before"]
-    #                         sim_before = debug_info[f"{term1}_{term2}"]["sim_before"]
-                            
-    #                         # Calculate deltas
-    #                         delta1 = torch.norm(emb1_after - emb1_before).item()
-    #                         delta2 = torch.norm(emb2_after - emb2_before).item()
-    #                         sim_after = F.cosine_similarity(emb1_after, emb2_after, dim=0).item()
-                            
-    #                         print(f"{term1}-{term2} changes:")
-    #                         print(f"  {term1} delta: {delta1:.6f}")
-    #                         print(f"  {term2} delta: {delta2:.6f}")
-    #                         print(f"  Similarity: {sim_before:.6f} → {sim_after:.6f}")
-    #                     except (AttributeError, KeyError):
-    #                         pass
-
-
-    #     if verbose:
-    #         self.logger.print()
-    #     print("EPOCH END")
 
     # def eval(self, dataloader: DataLoader, name='test'):
     #     self.program.store.eval()
@@ -830,7 +739,7 @@ class Trainer:
     
     def step_optimizer(self):
         # Print gradient norms for different parts of the model
-        print("=== Gradient Information ===")
+        # print("=== Gradient Information ===")
         
         # Check embedding gradients
         empty_grads = 0
@@ -839,10 +748,10 @@ class Trainer:
             total_params += 1
             if param.grad is None:
                 empty_grads += 1
-                print(f"Parameter {name} has no gradient")
+                # print(f"Parameter {name} has no gradient")
             else:
                 grad_norm = param.grad.norm().item()
-                print(f"Parameter {name}: grad_norm = {grad_norm}")
+                # print(f"Parameter {name}: grad_norm = {grad_norm}")
         
         print(f"{empty_grads} out of {total_params} parameters have no gradients")
         

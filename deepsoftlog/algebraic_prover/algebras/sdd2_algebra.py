@@ -49,12 +49,14 @@ class ConjoinedFacts:
         
         # Check for empty facts
         if not self.pos_facts:
-            print("WARNING: Empty positive facts collection")
+            pass
+            # print("WARNING: Empty positive facts collection")
             
         # Try to detect problematic fact patterns
         small_probs = [f for f in self.pos_facts if hasattr(f, 'get_probability') and f.get_probability() < 0.001]
         if small_probs:
-            print(f"WARNING: Very small probabilities detected: {small_probs}")
+            pass
+            # print(f"WARNING: Very small probabilities detected: {small_probs}")
         
         result = algebra.reduce_mul_value(self.pos_facts, self.neg_facts)
         # print(f"reduce_mul_value result: {result}")
@@ -62,8 +64,10 @@ class ConjoinedFacts:
         # Check result for numerical issues
         if isinstance(result, torch.Tensor):
             if torch.isneginf(result):
+                pass
                 print("CRITICAL: Evaluation resulted in -inf")
             elif torch.isnan(result):
+                pass
                 print("CRITICAL: Evaluation resulted in NaN")
                 
         return result
@@ -148,10 +152,10 @@ class DnfAlgebra(CompoundAlgebra[Union[ConjoinedFacts, SddFormula]]):
             # Add numerical safety checks
             if isinstance(result, torch.Tensor):
                 if torch.isneginf(result):
-                    print(f"FIXING: -inf result, replacing with floor value -20.0")
+                    # print(f"FIXING: -inf result, replacing with floor value -20.0")
                     result = torch.tensor(-20.0)
                 elif torch.isnan(result):
-                    print(f"FIXING: NaN result, replacing with floor value -20.0")
+                    # print(f"FIXING: NaN result, replacing with floor value -20.0")
                     result = torch.tensor(-20.0)
             
             return result

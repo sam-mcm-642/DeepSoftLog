@@ -186,54 +186,50 @@ class Proof:
     
     def apply_clauses(self):
         """Enhanced apply_clauses with diagnostic tracing"""
-        print(f"apply_clauses called for proof {id(self)} with {len(self.goals)} goals")
+        # print(f"apply_clauses called for proof {id(self)} with {len(self.goals)} goals")
         
         # Diagnostic for empty goals
         if not self.goals:
-            print("DIAGNOSTIC: apply_clauses called with empty goals")
+            # print("DIAGNOSTIC: apply_clauses called with empty goals")
             yield self  # Simply return this proof as it's already complete
             return
         
         # Diagnostic for object-only goals
         if all(g.functor == "object" for g in self.goals):
-            print(f"DIAGNOSTIC: All remaining goals are object predicates: {self.goals}")
-            print(f"DIAGNOSTIC: Value has soft unifications: {hasattr(self.value, 'pos_facts')}")
             if hasattr(self.value, 'pos_facts'):
-                print(f"DIAGNOSTIC: Soft unifications: {self.value.pos_facts}")
+                # print(f"DIAGNOSTIC: Soft unifications: {self.value.pos_facts}")
                 
                 # This is where we need to understand why these aren't being completed
-                print(f"DIAGNOSTIC: Trace of goals, value and completion status:")
-                print(f"  Goals: {self.goals}")
+                # print(f"DIAGNOSTIC: Trace of goals, value and completion status:")
+                # print(f"  Goals: {self.goals}")
                 # print(f"  Value: {self.value}")
-                print(f"  is_complete(): {self.is_complete()}")
+                # print(f"  is_complete(): {self.is_complete()}")
                 if hasattr(self, 'get_child'):
                     # Generate a child with empty goals for analysis
                     test_child = self.get_child(new_goals=tuple())
-                    print(f"  Test child with empty goals - is_complete(): {test_child.is_complete()}")
         
         # Standard processing
         first_goal, *remaining = self.goals
         
         # Special handling for conjunctions
         if first_goal.functor == "," and first_goal.get_arity() > 0:
-            print(f"Breaking down conjunction: {first_goal}")
+            # print(f"Breaking down conjunction: {first_goal}")
             conjoined_goals = first_goal.arguments
             new_goals = conjoined_goals + tuple(remaining)
             new_child = self.get_child(new_goals=new_goals, depth=self.depth + 1, value=self.value)
-            print(f"Yielding conjunction breakdown child with {len(new_child.goals)} goals")
+            # print(f"Yielding conjunction breakdown child with {len(new_child.goals)} goals")
             yield new_child
             return
         
         # Process matches
-        print(f"Looking for matches for: {first_goal}")
+        # print(f"Looking for matches for: {first_goal}")
         matches = list(self.proof_tree.program.all_matches(first_goal))
-        print(f"Found {len(matches)} matches")
         
         for i, (clause, unifier, new_facts) in enumerate(matches):
-            print(f"Processing match {i}: {clause}")
+            # print(f"Processing match {i}: {clause}")
             
             if clause.is_fact():
-                print(f"Match is a fact")
+                # print(f"Match is a fact")
                 # Fact match - continue with remaining goals
                 new_goals = tuple(g.apply_substitution(unifier) for g in remaining)
                 query = self.query.apply_substitution(unifier)
@@ -241,18 +237,15 @@ class Proof:
                 
                 # Diagnostic for object-only remaining goals
                 if new_goals and all(g.functor == "object" for g in new_goals):
-                    print(f"DIAGNOSTIC: After matching fact, only object goals remain: {new_goals}")
-                    print(f"DIAGNOSTIC: New value: {new_value}")
-                    print(f"DIAGNOSTIC: New value has soft facts: {hasattr(new_value, 'pos_facts')}")
                     if hasattr(new_value, 'pos_facts'):
-                        print(f"DIAGNOSTIC: New soft facts: {new_value.pos_facts}")
+                        pass
                 
                 child = self.get_child(query=query, new_goals=new_goals, depth=self.depth+1, value=new_value)
-                print(f"Yielding fact-matched child with {len(child.goals)} goals")
-                print(f"  is_complete(): {child.is_complete()}")
+                # print(f"Yielding fact-matched child with {len(child.goals)} goals")
+                # print(f"  is_complete(): {child.is_complete()}")
                 yield child
             else:
-                print(f"Match is a rule")
+                # print(f"Match is a rule")
                 # Rule match - add body goals first
                 body = clause.arguments[1]
                 if body.is_and():
@@ -269,7 +262,7 @@ class Proof:
                 new_value = self.create_new_value(clause, new_facts)
                 
                 child = self.get_child(query=query, new_goals=new_goals, depth=self.depth+1, value=new_value)
-                print(f"Yielding rule-matched child with {len(child.goals)} goals")
+                # print(f"Yielding rule-matched child with {len(child.goals)} goals")
                 yield child
 
 
@@ -281,28 +274,28 @@ class Proof:
     #     return new_value
     
     def create_new_value(self, clause, new_facts):
-        print(f"Creating new value from clause: {clause}")
+        # print(f"Creating new value from clause: {clause}")
         if new_facts:
             print(f"With new_facts: {new_facts}")
         
         new_facts_value = self.get_algebra().reduce_mul_value_pos(new_facts)
-        print(f"New facts value: {new_facts_value}")
+        # print(f"New facts value: {new_facts_value}")
         
         new_value = self.get_algebra().multiply(self.value, new_facts_value)
-        print(f"After multiply with current value: {new_value}")
+        # print(f"After multiply with current value: {new_value}")
         
         if clause.is_annotated():
             clause_value = self.get_algebra().value_pos(clause)
-            print(f"Clause is annotated with value: {clause_value}")
+            # print(f"Clause is annotated with value: {clause_value}")
             new_value = self.get_algebra().multiply_value_pos(new_value, clause)
-            print(f"Final value after clause annotation: {new_value}")
+            # print(f"Final value after clause annotation: {new_value}")
         
-        # Check for numerical issues
-        if isinstance(new_value, torch.Tensor):
-            if torch.isneginf(new_value):
-                print("CRITICAL: create_new_value produced -inf")
-            elif torch.isnan(new_value):
-                print("CRITICAL: create_new_value produced NaN")
+        # # Check for numerical issues
+        # if isinstance(new_value, torch.Tensor):
+        #     if torch.isneginf(new_value):
+        #         print("CRITICAL: create_new_value produced -inf")
+        #     elif torch.isnan(new_value):
+        #         print("CRITICAL: create_new_value produced NaN")
         
         return new_value
 
@@ -591,7 +584,7 @@ class ProofDebug(Proof):
         
         for clause, unifier, new_facts in matches:
             match_found = True
-            print(f"Found match with clause: {clause}")
+            # print(f"Found match with clause: {clause}")
             
             # Create updated bindings by combining current bindings with new unifier
             updated_bindings = dict(self.current_bindings)
@@ -600,7 +593,7 @@ class ProofDebug(Proof):
             if clause.is_fact():
                 # If we matched a fact, this goal is proven
                 # Continue with remaining goals only
-                print(f"Matched a fact, moving to remaining goals: {remaining}")
+                # print(f"Matched a fact, moving to remaining goals: {remaining}")
                 # Apply updated bindings to remaining goals
                 new_goals = tuple(g.apply_substitution(updated_bindings) for g in remaining)
                 query = self.query.apply_substitution(updated_bindings)
@@ -614,10 +607,10 @@ class ProofDebug(Proof):
                 )
             else:
                 # For rules, need to prove the body before continuing
-                print(f"Matched a rule, adding body goals")
+                # print(f"Matched a rule, adding body goals")
                 # Apply unifier to the body goals first
-                print(f"Clause body: {clause.arguments[1]}")
-                print(f"{unifier=}")
+                # print(f"Clause body: {clause.arguments[1]}")
+                # print(f"{unifier=}")
                 # Apply the updated bindings to both body and remaining goals
                 body = clause.arguments[1].apply_substitution(updated_bindings)
                 new_goals = body.arguments + tuple(g.apply_substitution(updated_bindings) for g in remaining)
@@ -631,9 +624,9 @@ class ProofDebug(Proof):
                     bindings=updated_bindings
                 )
         
-        if not match_found:
-            print(f"No matches found for: {first_goal}")
+        # if not match_found:
+        #     print(f"No matches found for: {first_goal}")
     
     def _debug_print(self, message, level=0):
         indent = "  " * (self.depth + level)
-        print(f"{indent}DEBUG: {message}")
+        # print(f"{indent}DEBUG: {message}")
