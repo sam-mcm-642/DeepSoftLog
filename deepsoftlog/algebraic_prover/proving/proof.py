@@ -27,7 +27,7 @@ class Proof:
         self.proof_tree = proof_tree
         self.current_bindings = bindings or {}  # Track accumulated bindings
         
-        print("Depth: ",  depth, "new proof", self)
+        # print("Depth: ",  depth, "new proof", self)
 
     # def is_complete(self) -> bool:
     #     return len(self.goals) == 0
@@ -62,7 +62,7 @@ class Proof:
         return self.proof_tree.algebra
 
     def get_children(self) -> Iterable["Proof"]:
-        print(f"goals[0]: {self.goals[0]}")
+        # print(f"goals[0]: {self.goals[0]}")
         if self.goals[0].functor == "\\+":
             yield from self.negation_node()
         else:
@@ -276,7 +276,8 @@ class Proof:
     def create_new_value(self, clause, new_facts):
         # print(f"Creating new value from clause: {clause}")
         if new_facts:
-            print(f"With new_facts: {new_facts}")
+            pass
+            # print(f"With new_facts: {new_facts}")
         
         new_facts_value = self.get_algebra().reduce_mul_value_pos(new_facts)
         # print(f"New facts value: {new_facts_value}")
@@ -533,7 +534,7 @@ class ProofDebug(Proof):
         # If there are no goals left, the proof is complete
         if not self.goals:
             # Return a successful proof state with empty goals
-            print("No more goals - proof complete!")
+            # print("No more goals - proof complete!")
             yield self.get_child(
                 new_goals=tuple(),
                 depth=self.depth + 1,

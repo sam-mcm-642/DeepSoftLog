@@ -32,7 +32,13 @@ def get_metrics(query: Query, results, dataset) -> dict[str, float]:
 
 def boolean_metrics(results, query) -> dict[str, float]:
     pred = max(results.values(), default=0)
+    print(f"Query: {query}")
+    print(f"Results: {results}")
+    print(f"Pred: {pred}")
+    if not results:
+        print("No results found.")
     diff = abs(query.p - pred)
+    print(f"Diff: {diff}")
     return {
         "diff": diff,
         "target": query.p,

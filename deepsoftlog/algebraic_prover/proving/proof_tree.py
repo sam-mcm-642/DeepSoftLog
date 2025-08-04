@@ -70,7 +70,7 @@ class ProofTree:
         attempts = 0
         while not self.queue.empty() and attempts < 1000 and len(self.proofs) < self.get_max_proofs():
             attempts += 1
-            print(f"PROOF ATTEMPT: {attempts}, Proofs found: {len(self.proofs)}")
+            # print(f"PROOF ATTEMPT: {attempts}, Proofs found: {len(self.proofs)}")
             
             # Try regular step logic
             proof = self.step()
@@ -212,12 +212,13 @@ class ProofTree:
             # Get children - diagnostic logging for any issues
             try:
                 child_proofs = list(proof.get_children()) 
-                print(f"  Generated {len(child_proofs)} child proofs")
+                # print(f"  Generated {len(child_proofs)} child proofs")
                 
                 # Analyze children
                 for i, child in enumerate(child_proofs[:3]):  # Limit to first 3 to avoid verbose output
-                    print(f"  Child {i}: {len(child.goals)} goals: {child.goals[:2]}{'...' if len(child.goals) > 2 else ''}")
-                    print(f"    is_complete(): {child.is_complete()}")
+                    # print(f"  Child {i}: {len(child.goals)} goals: {child.goals[:2]}{'...' if len(child.goals) > 2 else ''}")
+                    # print(f"    is_complete(): {child.is_complete()}")
+                    pass
                 
                 for child_proof in child_proofs:
                     child_remaining = child_proof.nb_goals()
@@ -232,7 +233,8 @@ class ProofTree:
                 import traceback
                 traceback.print_exc()
         else:
-            print(f"  Pruned proof at depth {proof.depth}")
+            pass
+            # print(f"  Pruned proof at depth {proof.depth}")
 
     
 

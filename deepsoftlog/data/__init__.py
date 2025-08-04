@@ -325,7 +325,7 @@ def query_to_prolog(string, **kwargs):
     for expr in expressions[1:]:
         combined_expr = combined_expr & expr
     
-    return Query(combined_expr)
+    return Query(combined_expr, p = p)
 
         
 def to_prolog_image(img):
