@@ -405,7 +405,6 @@ def get_proofs(prover, algebra, **kwargs) -> tuple[dict[Expr, Value], int, int]:
     proofs = defaultdict(algebra.zero)
     nb_proofs = 0
     
-    print("Collecting proofs from proof tree...")
     for proof in proof_tree.get_proofs():
         # print(f"Found proof: {proof.query}")
         # print(f"  Goals: {proof.goals}")

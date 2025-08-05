@@ -264,10 +264,11 @@ class TypeExternal(External):
                 # print(f"Received log_score: {log_score}")
                 # print(f"log_score type: {type(log_score)}")
                 if isinstance(log_score, torch.Tensor):
-                    print(f"log_score requires_grad: {log_score.requires_grad}")
+                    pass
+                    # print(f"log_score requires_grad: {log_score.requires_grad}")
                     
             except Exception as e:
-                # print(f"Error calculating soft unification: {e}")
+                print(f"Error calculating soft unification: {e}")
                 log_score = -5.0  # Fallback
         
         # Create the fact expression
@@ -282,13 +283,14 @@ class TypeExternal(External):
             infix=True  # Use infix notation
         )
         
-        print(f"Created soft_fact: {soft_fact}")
+        # print(f"Created soft_fact: {soft_fact}")
         if hasattr(soft_fact, 'get_log_probability'):
             log_prob = soft_fact.get_log_probability()
             # print(f"soft_fact log_probability: {log_prob}")
             # print(f"log_prob type: {type(log_prob)}")
             if isinstance(log_prob, torch.Tensor):
-                print(f"log_prob requires_grad: {log_prob.requires_grad}")
+                pass
+                # print(f"log_prob requires_grad: {log_prob.requires_grad}")
         
         # Return the fact expression, empty substitution, and soft fact
         return [(Fact(type_expr), {}, {soft_fact})]

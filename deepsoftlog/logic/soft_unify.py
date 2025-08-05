@@ -388,8 +388,8 @@ def soft_mgu(term1: Expr, term2: Expr, store, metric, soft_cache=None) -> Option
                             pair_key = (terms[0], terms[1])
                             
                             # Check cache for existing unification
-                            if soft_cache is not None and pair_key in soft_cache:
-                                # print(f"Reusing cached soft unification for {s_inner} and {t_inner}")
+                            if soft_cache is not None and pair_key in soft_cache and 1 == 0:
+                                print(f"Reusing cached soft unification for {s_inner} and {t_inner}")
                                 soft_unifies.add(soft_cache[pair_key])
                             else:
                                 # print(f"Creating new soft unification fact for {s_inner} and {t_inner}")

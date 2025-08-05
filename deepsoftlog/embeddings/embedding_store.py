@@ -37,7 +37,10 @@ class EmbeddingStore(nn.Module):
     def soft_unify_score(self, t1: Expr, t2: Expr, distance_metric: str):
         if distance_metric == "dummy":
             return math.log(0.6)
-
+            # ALWAYS recompute during training - no caching
+        e1, e2 = self.forward(t1), self.forward(t2)
+        score = embedding_similarity(e1, e2, distance_metric)
+        return score
         sign = frozenset([t1, t2])
         if sign not in self._cache:
             e1, e2 = self.forward(t1), self.forward(t2)

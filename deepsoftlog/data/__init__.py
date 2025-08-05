@@ -194,6 +194,7 @@ def expression_to_prolog(query, name="expression", **kwargs):
 
 
 def query_to_prolog(string, **kwargs):
+    p = kwargs.get('p', 1.0)
     # Parse the input string into individual expressions
     expressions = []
     

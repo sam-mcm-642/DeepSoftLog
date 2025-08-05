@@ -15,6 +15,8 @@ from .soft_unify import soft_mgu
 from deepsoftlog.data import sg_to_prolog
 from deepsoftlog.algebraic_prover.terms.transformations import normalize_clauses
 from deepsoftlog.algebraic_prover.proving.proof_queue import OrderedProofQueue
+from deepsoftlog.logic.soft_term import SoftTerm
+from deepsoftlog.training.loss import nll_loss, get_optimizer
 
 class SoftProofModule(ProofModule):
     def __init__(
@@ -68,7 +70,7 @@ class SoftProofModule(ProofModule):
                 if variables:
                     var_x = variables[0]
                     # Create a substitution to replace X with groundtruth
-                    substitution = {var_x: Expr(str(groundtruth_object))}
+                    substitution = {var_x: SoftTerm(Expr(str(groundtruth_object)))}
                     # Apply the substitution to create a modified query
                     modified_query = query.apply_substitution(substitution)
                     print(f"Looking for groundtruth-unified query: {modified_query}")
@@ -138,6 +140,7 @@ class SoftProofModule(ProofModule):
         
         if isinstance(result_dict, dict):
             print(f"  Result keys: {list(result_dict.keys())}")
+            print("BREAK")
             for k, v in result_dict.items():
                 print(f"  {k}: {v}")
         
@@ -220,6 +223,12 @@ class SoftProofModule(ProofModule):
                 except Exception as e:
                     print(f"Couldn't add embedding for {constant}, skipping")
         
+        # After adding new embeddings, recreate the optimizer
+        if hasattr(self, 'trainer_reference'):
+            print(f"Recreating optimizer after updating clauses")
+            # Recreate optimizer with new parameters
+            self.trainer_reference.optimizer = get_optimizer(self.get_store(), self.trainer_reference.config)
+            
         # Clear cache
         self.get_store().clear_cache()
 
@@ -254,11 +263,11 @@ class SoftProofModule(ProofModule):
                 
                 # Check the first few items
                 for i, (_, _, proof) in enumerate(queue._queue[:3]):
-                    print(f"\nQueue item {i}:")
-                    print(f"  Query: {proof.query}")
-                    print(f"  Goals: {proof.goals}")
-                    print(f"  Is complete: {proof.is_complete()}")
-                    print(f"  Value: {proof.value}")
+                    # print(f"\nQueue item {i}:")
+                    # print(f"  Query: {proof.query}")
+                    # print(f"  Goals: {proof.goals}")
+                    # print(f"  Is complete: {proof.is_complete()}")
+                    # print(f"  Value: {proof.value}")
                     
                     # Check for object predicates
                     if proof.goals and all(g.functor == "object" for g in proof.goals):

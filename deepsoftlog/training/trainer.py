@@ -574,25 +574,12 @@ class Trainer:
         
         with open(csv_file, 'a') as f:
             if create_header:
-                f.write('epoch,batch,loss,diff,proof_steps,nb_proofs,query,target,dog_animal_sim,cat_animal_sim\n')
+                f.write('epoch,batch,loss,diff,proof_steps,nb_proofs,query,target\n')
         
         for batch_idx, instances in enumerate(tqdm(self.train_dataset, leave=False, smoothing=0, disable=not verbose)):
             current_time = time()
             
-            # Get current similarities
-            dog_animal_sim = 0.0
-            cat_animal_sim = 0.0
-            if hasattr(self.program.store, 'constant_embeddings'):
-                embeddings = self.program.store.constant_embeddings
-                if 'dog' in embeddings and 'animal' in embeddings:
-                    dog_emb = embeddings['dog']
-                    animal_emb = embeddings['animal']
-                    dog_animal_sim = F.cosine_similarity(dog_emb, animal_emb, dim=0).item()
-                
-                if 'cat' in embeddings and 'animal' in embeddings:
-                    cat_emb = embeddings['cat']
-                    animal_emb = embeddings['animal']
-                    cat_animal_sim = F.cosine_similarity(cat_emb, animal_emb, dim=0).item()
+
             
             # Normal loss calculation and optimization
             loss, diff, proof_steps, nb_proofs = self.get_loss(instances)
@@ -604,8 +591,8 @@ class Trainer:
             # Get query and target info
             query_str = str(instances[0].query) if hasattr(instances[0], 'query') else 'unknown'
             target_str = str(instances[0].target) if hasattr(instances[0], 'target') else 'unknown'
-            print(f"Query: {query_str}")
-            print(f"Target: {target_str}")
+            # print(f"Query: {query_str}")
+            # print(f"Target: {target_str}")
             
             # Log to CSV
             with open(csv_file, 'a') as f:
@@ -614,7 +601,7 @@ class Trainer:
                 safe_target = target_str.replace(',', ';').replace('\n', ' ')
                 
                 f.write(f"{self.current_epoch},{batch_idx},{loss},{diff},{proof_steps},{nb_proofs},")
-                f.write(f"\"{safe_query}\",\"{safe_target}\",{dog_animal_sim},{cat_animal_sim}\n")
+                f.write(f"\"{safe_query}\",\"{safe_target}\"\n")
             
             # Perform optimization step
             grad_norm = 0.
@@ -639,7 +626,8 @@ class Trainer:
             self.logger.print()
         print("EPOCH END")
     
-    
+        # ADD THIS LINE:
+        self.check_embedding_changes(self.current_epoch - 1)
 
     # def eval(self, dataloader: DataLoader, name='test'):
     #     self.program.store.eval()
@@ -760,6 +748,9 @@ class Trainer:
             if self.grad_clip is not None:
                 torch.nn.utils.clip_grad_norm_(self.program.parameters(), max_norm=self.grad_clip)
             grad_norm = self.program.grad_norm()
+        # In your trainer, right before optimizer.step():
+        print(f"About to step optimizer with {sum(len(g['params']) for g in self.optimizer.param_groups)} parameters")
+        print(f"Store has {len(self.program.store.constant_embeddings)} embeddings")
         self.optimizer.step()
         self.optimizer.zero_grad(set_to_none=True)
         self.get_store().clear_cache()
@@ -778,6 +769,47 @@ class Trainer:
 
     def get_store(self):
         return self.program.get_store()
+    
+    # def update_optimizer_if_needed(self):
+    #     """Update optimizer if new parameters were added"""
+    #     current_param_count = sum(len(group['params']) for group in self.optimizer.param_groups)
+    #     expected_constant_params = len(self.program.store.constant_embeddings)
+    #     expected_functor_params = sum(len(list(model.parameters())) for model in self.program.store.functor_embeddings.values())
+    #     expected_total = expected_constant_params + expected_functor_params
+        
+    #     if current_param_count < expected_total:
+    #         print(f"Updating optimizer: {current_param_count} -> {expected_total} parameters")
+    #         from deepsoftlog.training.loss import get_optimizer
+    #         self.optimizer = get_optimizer(self.program.get_store(),
+    #         self.config)
+    
+    def update_optimizer_if_needed(self):
+        """Update optimizer if new parameters were added"""
+        print("Checking if optimizer needs update...")
+        current_param_count = sum(len(group['params']) for group in self.optimizer.param_groups)
+        print(f"Current optimizer has {current_param_count} parameters")
+        expected_constant_params = len(self.program.store.constant_embeddings)
+        print(f"Expected constant parameters: {expected_constant_params}")
+        print(f"Constant embeddings: {self.program.store.constant_embeddings.keys()}")
+        print(f"Functor embeddings: {self.program.store.functor_embeddings.keys()}")
+        expected_functor_params = sum(len(list(model.parameters())) for model in self.program.store.functor_embeddings.values())
+        print(f"Expected functor parameters: {expected_functor_params}")
+        expected_total = expected_constant_params + expected_functor_params
+        
+        if current_param_count < expected_total:
+            print(f"Updating optimizer: {current_param_count} -> {expected_total} parameters")
+            
+            # Extract config from existing optimizer
+            config = {
+                'optimizer': 'AdamW',
+                'embedding_learning_rate': self.optimizer.param_groups[0]['lr'],
+                'functor_learning_rate': self.optimizer.param_groups[1]['lr'],
+                'functor_weight_decay': self.optimizer.param_groups[1].get('weight_decay', 0.)
+            }
+            
+            from deepsoftlog.training.loss import get_optimizer
+            self.optimizer = get_optimizer(self.program.get_store(), config)
+            print(f"Recreated optimizer with {sum(len(g['params']) for g in self.optimizer.param_groups)} parameters")
 
 
 def create_trainer(program, load_train_dataset, cfg):
