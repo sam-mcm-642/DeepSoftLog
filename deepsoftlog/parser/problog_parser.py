@@ -49,7 +49,7 @@ def clean_program(program_str: str) -> str:
 def debug_method_call(func):
     def wrapper(*args, **kwargs):
         class_name = args[0].__class__.__name__  # Get class name from 'self'
-        print(f"Calling: {class_name}.{func.__name__}")
+        # print(f"Calling: {class_name}.{func.__name__}")
         return func(*args, **kwargs)
     return wrapper
 

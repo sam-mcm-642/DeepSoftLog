@@ -101,6 +101,10 @@ class SoftProofModule(ProofModule):
         
         # No match found - return a tensor with requires_grad=True
         print(f"No match found, returning tensor with requires_grad=True")
+        # print(f"Scene graph facts for failed query {query}:")
+        # for clause in self.clauses:
+        #     # if clause.functor in ['object', 'scene_graph', 'type', 'groundtruth']:
+        #     print(f"  {clause}")
         return torch.tensor(-20.0, requires_grad=True), proof_steps, nb_proofs
     
     def query(self, *args, **kwargs):
@@ -223,12 +227,22 @@ class SoftProofModule(ProofModule):
                 except Exception as e:
                     print(f"Couldn't add embedding for {constant}, skipping")
         
-        # After adding new embeddings, recreate the optimizer
-        if hasattr(self, 'trainer_reference'):
-            print(f"Recreating optimizer after updating clauses")
-            # Recreate optimizer with new parameters
-            self.trainer_reference.optimizer = get_optimizer(self.get_store(), self.trainer_reference.config)
-            
+        # # After adding new embeddings, recreate the optimizer
+        # if hasattr(self, 'trainer_reference'):
+        #     print(f"Recreating optimizer after updating clauses")
+        #     # Recreate optimizer with new parameters
+        #     self.trainer_reference.optimizer = get_optimizer(self.get_store(), self.trainer_reference.config)
+        
+        #     # Add new parameters to optimizer
+        # new_params = []
+        # for name, param in self.get_store().constant_embeddings.items():
+        #     if not any(param is p for group in optimizer.param_groups for p in group['params']):
+        #         new_params.append(param)
+        
+        # if new_params:
+        #     optimizer.param_groups[0]['params'].extend(new_params)
+        
+        
         # Clear cache
         self.get_store().clear_cache()
 

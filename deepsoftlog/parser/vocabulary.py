@@ -42,3 +42,13 @@ class Vocabulary:
 
     def get_functors(self):
         return sorted(self.functors)
+    
+    def add_constant(self, const: str):
+        if const not in ILLEGAL_CONSTANTS:
+            self.constants.add(const)
+        return self
+
+    def add_functor(self, functor_signature: str):
+        if functor_signature not in ILLEGAL_MODELS:
+            self.functors.add(functor_signature)
+        return self

@@ -281,11 +281,11 @@ class Trainer:
         total_params = 0
         params_without_grad = 0
         
-        print("PARAMETER GRADIENT STATUS:")
+        # print("PARAMETER GRADIENT STATUS:")
         
         # Check embeddings in the store
         if hasattr(program, 'store') and hasattr(program.store, 'constant_embeddings'):
-            print("\nCONSTANT EMBEDDINGS:")
+            # print("\nCONSTANT EMBEDDINGS:")
             for name, param in program.store.constant_embeddings.items():
                 total_params += 1
                 if not hasattr(param, 'grad') or param.grad is None:
@@ -297,19 +297,19 @@ class Trainer:
         
         # Check all parameters using the parameters() method
         try:
-            print("\nALL PARAMETERS:")
+            # print("\nALL PARAMETERS:")
             for param in program.parameters():
                 total_params += 1
                 if param.grad is None:
                     params_without_grad += 1
-                    print(f"Parameter has no gradient")
+                    # print(f"Parameter has no gradient")
                 else:
                     grad_norm = torch.norm(param.grad).item()
-                    print(f"Parameter - grad norm: {grad_norm:.6f}")
+                    # print(f"Parameter - grad norm: {grad_norm:.6f}")
         except Exception as e:
             print(f"Error checking parameters: {e}")
         
-        print(f"{params_without_grad} out of {total_params} parameters have no gradients")
+        # print(f"{params_without_grad} out of {total_params} parameters have no gradients")
 
     def get_embedding_debug_info(store, term1, term2):
         result = {}
@@ -569,7 +569,7 @@ class Trainer:
             self.current_epoch = 0
         
         # Setup CSV file if it doesn't exist
-        csv_file = 'training_metrics.csv'
+        csv_file = 'training_metrics_final.csv'
         create_header = not os.path.exists(csv_file) or os.path.getsize(csv_file) == 0
         
         with open(csv_file, 'a') as f:
@@ -785,19 +785,18 @@ class Trainer:
     
     def update_optimizer_if_needed(self):
         """Update optimizer if new parameters were added"""
-        print("Checking if optimizer needs update...")
+        # print("Checking if optimizer needs update...")
         current_param_count = sum(len(group['params']) for group in self.optimizer.param_groups)
-        print(f"Current optimizer has {current_param_count} parameters")
+        # print(f"Current optimizer has {current_param_count} parameters")
         expected_constant_params = len(self.program.store.constant_embeddings)
-        print(f"Expected constant parameters: {expected_constant_params}")
-        print(f"Constant embeddings: {self.program.store.constant_embeddings.keys()}")
-        print(f"Functor embeddings: {self.program.store.functor_embeddings.keys()}")
+        # print(f"Expected constant parameters: {expected_constant_params}")
+        # print(f"Constant embeddings: {self.program.store.constant_embeddings.keys()}")
+        # print(f"Functor embeddings: {self.program.store.functor_embeddings.keys()}")
         expected_functor_params = sum(len(list(model.parameters())) for model in self.program.store.functor_embeddings.values())
-        print(f"Expected functor parameters: {expected_functor_params}")
         expected_total = expected_constant_params + expected_functor_params
         
         if current_param_count < expected_total:
-            print(f"Updating optimizer: {current_param_count} -> {expected_total} parameters")
+            # print(f"Updating optimizer: {current_param_count} -> {expected_total} parameters")
             
             # Extract config from existing optimizer
             config = {
@@ -809,7 +808,93 @@ class Trainer:
             
             from deepsoftlog.training.loss import get_optimizer
             self.optimizer = get_optimizer(self.program.get_store(), config)
-            print(f"Recreated optimizer with {sum(len(g['params']) for g in self.optimizer.param_groups)} parameters")
+            # print(f"Recreated optimizer with {sum(len(g['params']) for g in self.optimizer.param_groups)} parameters")
+    def save_pretrained_model(self, save_path):
+        """Save all components needed to reload pretrained model"""
+        
+        checkpoint = {
+            # Main learned parameters
+            'embedding_store_state_dict': self.program.store.state_dict(),
+            
+            # Model configuration
+            'embedding_dimensions': self.program.store.ndim,
+            'embedding_metric': self.program.embedding_metric,
+            'semantics': self.program.semantics,
+            
+            # Vocabulary (critical for knowing which embeddings exist)
+            'vocabulary_constants': list(self.program.store.vocabulary.get_constants()),
+            'vocabulary_functors': [str(sig) for sig in self.program.store.vocabulary.get_functors()],
+            
+            # Training info (optional but useful)
+            'training_epochs': self.current_epoch,
+            'final_loss': getattr(self, 'final_loss', None),
+        }
+        
+        torch.save(checkpoint, save_path)
+        print(f"Saved pretrained model to {save_path}")
+        
+    def load_pretrained_model(self, checkpoint_path, initial_program_path='initial_program.pl'):
+        """Load pretrained model with debugging"""
+        
+        checkpoint = torch.load(checkpoint_path, map_location='cpu')
+        print(f"Checkpoint has {len(checkpoint['vocabulary_constants'])} constants")
+        print(f"First 10 saved constants: {checkpoint['vocabulary_constants'][:10]}")
+        
+        # Parse the base program
+        from deepsoftlog.parser.parser import parse_file
+        pretrained_program = parse_file(
+            initial_program_path,
+            embedding_metric=checkpoint['embedding_metric'],
+            semantics=checkpoint['semantics'],
+        )
+        
+        # Recreate vocabulary
+        from deepsoftlog.parser.vocabulary import Vocabulary
+        vocab = Vocabulary()
+        for const in checkpoint['vocabulary_constants']:
+            vocab.add_constant(const)
+        for functor_str in checkpoint['vocabulary_functors']:
+            try:
+                vocab.add_functor(eval(functor_str))
+            except:
+                pass
+        
+        print(f"Reconstructed vocab has {len(vocab.get_constants())} constants")
+        
+        # Create store
+        from deepsoftlog.embeddings.initialize_vector import Initializer
+        from deepsoftlog.embeddings.nn_models import EmbeddingFunctor
+        from deepsoftlog.embeddings.embedding_store import EmbeddingStore
+        
+        initializer = Initializer(EmbeddingFunctor, 'uniform', checkpoint['embedding_dimensions'])
+        new_store = EmbeddingStore(checkpoint['embedding_dimensions'], initializer, vocab)
+        
+        print(f"Store created with {len(new_store.constant_embeddings)} embeddings")
+        
+        # Check a few embedding values BEFORE loading
+        test_embedding = 'chair' if 'chair' in new_store.constant_embeddings else list(new_store.constant_embeddings.keys())[0]
+        before_norm = new_store.constant_embeddings[test_embedding].norm().item()
+        print(f"BEFORE load_state_dict - {test_embedding} norm: {before_norm:.6f}")
+        
+        # Load state dict
+        missing_keys, unexpected_keys = new_store.load_state_dict(checkpoint['embedding_store_state_dict'], strict=False)
+        print(f"Missing keys: {len(missing_keys)}")
+        print(f"Unexpected keys: {len(unexpected_keys)}")
+        if missing_keys:
+            print(f"First 5 missing: {list(missing_keys)[:5]}")
+        
+        # Check the same embedding AFTER loading
+        after_norm = new_store.constant_embeddings[test_embedding].norm().item()
+        print(f"AFTER load_state_dict - {test_embedding} norm: {after_norm:.6f}")
+        
+        if abs(before_norm - after_norm) < 1e-6:
+            print("❌ PROBLEM: Embedding didn't change after loading!")
+        else:
+            print("✅ Good: Embedding changed after loading")
+        
+        pretrained_program.store = new_store
+        return pretrained_program
+
 
 
 def create_trainer(program, load_train_dataset, cfg):

@@ -39,6 +39,11 @@ class EmbeddingStore(nn.Module):
             return math.log(0.6)
             # ALWAYS recompute during training - no caching
         e1, e2 = self.forward(t1), self.forward(t2)
+            # DEBUG: Check embedding types
+        if callable(e1):
+            print(f"🚨 e1 IS A FUNCTION: {e1}")
+        if callable(e2):
+            print(f"🚨 e2 IS A FUNCTION: {e2}")
         score = embedding_similarity(e1, e2, distance_metric)
         return score
         sign = frozenset([t1, t2])
@@ -105,13 +110,13 @@ class EmbeddingStore(nn.Module):
 
         name = term.functor
         
-        if '.' in name or name in ['cpu', 'cuda', 'to']:
+        if '.' in name or name in ['cpu', 'cuda', 'to', 'train', 'clear']:
             # Return a default embedding for problematic constants
             return torch.zeros(self.ndim).to(self.device)
         
         # Create embedding if it doesn't exist
         if name not in self.constant_embeddings:
-            # print(f"Creating new embedding for term: {name}")
+            print(f"Creating new embedding for term: {name}")
             self.constant_embeddings[name] = self.initializer(name)
         
         return self.constant_embeddings[name]

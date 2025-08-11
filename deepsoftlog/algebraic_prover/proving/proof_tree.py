@@ -68,7 +68,7 @@ class ProofTree:
     def get_proofs(self) -> Iterator[Proof]:
         """More aggressive approach to finding proofs"""
         attempts = 0
-        while not self.queue.empty() and attempts < 1000 and len(self.proofs) < self.get_max_proofs():
+        while not self.queue.empty() and attempts < 1200 and len(self.proofs) < self.get_max_proofs():
             attempts += 1
             # print(f"PROOF ATTEMPT: {attempts}, Proofs found: {len(self.proofs)}")
             
@@ -229,6 +229,7 @@ class ProofTree:
                         
                 self.queue.add_first(self.max_branching, local_queue)
             except Exception as e:
+                print(f"proof remaining: {proof_remaining}")
                 print(f"ERROR in get_children: {str(e)}")
                 import traceback
                 traceback.print_exc()

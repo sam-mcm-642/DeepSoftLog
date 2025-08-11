@@ -22,27 +22,56 @@ def data_to_prolog(rows, name="r", **kwargs):
         args = [SoftTerm(a) for a in args]
         yield Query(Expr(name, *args), **kwargs)
 
+# def sg_to_prolog(dataset_instance, name="scene_graph"):
+#     # yield Fact(Expr("groundtruth", SoftTerm(Constant("man")), Constant("bbox1")))
+#     # yield Fact(Expr("object", SoftTerm(Constant("man")), Constant("bbox1")))
+#     scene_graph = dataset_instance.scene_graph
+   
+#     # Relationship facts
+#     for row in scene_graph.triplets:
+#         args = [Constant(a) for a in row]
+#         args = [SoftTerm(args[1]), args[0], args[2]]
+#         yield Fact(Expr(name, *args))
+
+#     # Object facts
+#     for bbox_id, (obj_name, _) in scene_graph.bounding_boxes.items():
+#         args = [SoftTerm(Constant(obj_name)), Constant(bbox_id)]
+#         yield Fact(Expr("object", *args))
+
+#     # Groundtruth fact
+#     print(f"Groundtruth: {dataset_instance.target[0]}, {dataset_instance.target[1]}")
+#     args = [SoftTerm(Constant(dataset_instance.target[0])), Constant(dataset_instance.target[1])]
+#     yield Fact(Expr("groundtruth", SoftTerm(Constant(dataset_instance.target[0])), Constant(dataset_instance.target[1])))
+   
 def sg_to_prolog(dataset_instance, name="scene_graph"):
-    # yield Fact(Expr("groundtruth", SoftTerm(Constant("man")), Constant("bbox1")))
-    # yield Fact(Expr("object", SoftTerm(Constant("man")), Constant("bbox1")))
     scene_graph = dataset_instance.scene_graph
    
-    # Relationship facts
-    for row in scene_graph.triplets:
-        args = [Constant(a) for a in row]
-        args = [SoftTerm(args[1]), args[0], args[2]]
+    # Relationship facts from triplets
+    for triplet in scene_graph.triplets:
+        subject_bbox_id, relationship, object_id = triplet
+        args = [
+            SoftTerm(Constant(relationship)),
+            Constant(subject_bbox_id),
+            Constant(object_id)  # Could be bbox_id or att_id
+        ]
         yield Fact(Expr(name, *args))
 
-    # Object facts
-    for bbox_id, (obj_name, _) in scene_graph.bounding_boxes.items():
+    # Object facts for bounding boxes
+    for bbox_id, (obj_name, bbox_coords) in scene_graph.bounding_boxes.items():
         args = [SoftTerm(Constant(obj_name)), Constant(bbox_id)]
         yield Fact(Expr("object", *args))
+    
+    # Object facts for attributes (NEW)
+    if hasattr(scene_graph, 'attributes') and scene_graph.attributes:
+        for attr_id, attr_name in scene_graph.attributes.items():
+            args = [SoftTerm(Constant(attr_name)), Constant(attr_id)]
+            yield Fact(Expr("object", *args))
 
     # Groundtruth fact
-    print(f"Groundtruth: {dataset_instance.target[0]}, {dataset_instance.target[1]}")
-    args = [SoftTerm(Constant(dataset_instance.target[0])), Constant(dataset_instance.target[1])]
-    yield Fact(Expr("groundtruth", SoftTerm(Constant(dataset_instance.target[0])), Constant(dataset_instance.target[1])))
-   
+    if dataset_instance.target[1] is not None:
+        target_obj_name, target_id = dataset_instance.target
+        args = [SoftTerm(Constant(target_obj_name)), Constant(target_id)]
+        yield Fact(Expr("groundtruth", *args))
 
 
 def ontology_to_prolog(rows, name="ontology"):

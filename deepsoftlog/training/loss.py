@@ -9,6 +9,7 @@ def get_optimizer(store, config: dict):
     constant_group = {
         'params': store.constant_embeddings.parameters(),
         'lr': config['embedding_learning_rate'],
+        'weight_decay': config.get('weight_decay', 0.)
     }
     functor_group = {
         'params': store.functor_embeddings.parameters(),
