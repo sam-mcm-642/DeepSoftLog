@@ -363,19 +363,19 @@ class ProbabilisticProofModule(ProofModule):
         super().__init__(clauses, algebra=DnfAlgebra(eval_algebra))
 
 
-# def get_proofs(prover, algebra, **kwargs) -> tuple[dict[Expr, Value], int, int]:
-#     # print("get_proofs called")
-#     proof_tree = ProofTree(prover, algebra=algebra, **kwargs)
-#     proofs = defaultdict(algebra.zero)
-#     nb_proofs = 0
-#     for proof in proof_tree.get_proofs():
-#         proofs[proof.query] = algebra.add(proofs[proof.query], proof.value)
-#         nb_proofs += 1
+def get_proofs(prover, algebra, **kwargs) -> tuple[dict[Expr, Value], int, int]:
+    # print("get_proofs called")
+    proof_tree = ProofTree(prover, algebra=algebra, **kwargs)
+    proofs = defaultdict(algebra.zero)
+    nb_proofs = 0
+    for proof in proof_tree.get_proofs():
+        proofs[proof.query] = algebra.add(proofs[proof.query], proof.value)
+        nb_proofs += 1
 
-#     # print("ALL PROOFS", {answer: algebra.evaluate(proof) for answer, proof in proofs.items()})
-#     return dict(proofs), proof_tree.nb_steps, nb_proofs
+    # print("ALL PROOFS", {answer: algebra.evaluate(proof) for answer, proof in proofs.items()})
+    return dict(proofs), proof_tree.nb_steps, nb_proofs
 
-# Modify the get_proofs function in proof_module.py
+# # Modify the get_proofs function in proof_module.py
 # def get_proofs(prover, algebra, **kwargs) -> tuple[dict[Expr, Value], int, int]:
 #     proof_tree = ProofTree(prover, algebra=algebra, **kwargs)
 #     proofs = defaultdict(algebra.zero)
@@ -397,49 +397,255 @@ class ProbabilisticProofModule(ProofModule):
 
 #     return dict(proofs), proof_tree.nb_steps, nb_proofs
 
-def get_proofs(prover, algebra, **kwargs) -> tuple[dict[Expr, Value], int, int]:
-    # print(f"get_proofs called with kwargs: {kwargs}")
+# # def get_proofs(prover, algebra, **kwargs) -> tuple[dict[Expr, Value], int, int]:
+# #     # print(f"get_proofs called with kwargs: {kwargs}")
     
-    # Create and run proof tree
+# #     # Create and run proof tree
+# #     proof_tree = ProofTree(prover, algebra=algebra, **kwargs)
+# #     proofs = defaultdict(algebra.zero)
+# #     nb_proofs = 0
+    
+# #     for proof in proof_tree.get_proofs():
+# #         # print(f"Found proof: {proof.query}")
+# #         # print(f"  Goals: {proof.goals}")
+# #         # print(f"  Value: {proof.value}")
+        
+# #         proofs[proof.query] = algebra.add(proofs[proof.query], proof.value)
+# #         nb_proofs += 1
+    
+# #     # print(f"Proof collection complete: {nb_proofs} proofs in {proof_tree.nb_steps} steps")
+    
+# #     # Check if no proofs found
+# #     if nb_proofs == 0:
+# #         # print("WARNING: No proofs found in proof tree")
+# #         # print(f"Proof tree stats:")
+# #         # print(f"  Steps: {proof_tree.nb_steps}")
+# #         # print(f"  Answers: {proof_tree.answers}")
+# #         # print(f"  Value: {proof_tree.value}")
+        
+# #         # Check for incomplete proofs with only object predicates
+# #         if hasattr(proof_tree, '_proof_history'):
+# #             near_complete = [p for _, p in proof_tree._proof_history 
+# #                            if p.goals and all(g.functor == "object" for g in p.goals)]
+            
+# #             # if near_complete:
+# #             #     # print(f"Found {len(near_complete)} proofs with only object predicates:")
+# #             #     for i, p in enumerate(near_complete[:3]):  # Show at most 3
+# #                     # print(f"  Near-complete proof {i}:")
+# #                     # print(f"    Query: {p.query}")
+# #                     # print(f"    Goals: {p.goals}")
+# #                     # print(f"    Value: {p.value}")
+# #                     # print(f"    is_complete(): {p.is_complete()}")
+                    
+# #                     # Look for soft unifications that should allow completion
+# #                     # if hasattr(p.value, 'pos_facts'):
+# #                     #     print(f"    Soft unifications: {p.value.pos_facts}")
+    
+# #     # Return the results as normal - no artificial fixes
+# #     return dict(proofs), proof_tree.nb_steps, nb_proofs
+
+# def get_proofs(prover, algebra, **kwargs) -> tuple[dict[Expr, Value], int, int]:
+#     """Enhanced get_proofs that extracts bbox_id and soft unification facts"""
+#     proof_tree = ProofTree(prover, algebra=algebra, **kwargs)
+#     proofs = defaultdict(algebra.zero)
+#     proof_metadata = {}  # Store detailed information for each proof
+#     nb_proofs = 0
+    
+#     for proof in proof_tree.get_proofs():
+#         # Extract Y variable binding (contains bbox_id)
+#         bbox_id = None
+#         variable_bindings = {}
+        
+#         if hasattr(proof, 'current_bindings') and proof.current_bindings:
+#             from deepsoftlog.algebraic_prover.terms.variable import Variable
+#             for var, val in proof.current_bindings.items():
+#                 var_name = var.name if isinstance(var, Variable) else str(var)
+#                 variable_bindings[var_name] = str(val)
+                
+#                 # Specifically capture Y variable (bbox_id)
+#                 if isinstance(var, Variable) and var.name == 'Y':
+#                     bbox_id = str(val)
+#                     print(f"EXTRACTED Y binding: Y = {bbox_id} for query {proof.query}")
+        
+#         # Extract soft unification facts
+#         soft_unifications = []
+        
+#         # Method 1: Extract from proof.value (for SDD2/DnfAlgebra)
+#         if hasattr(proof.value, 'pos_facts') and proof.value.pos_facts:
+#             for fact in proof.value.pos_facts:
+#                 soft_unif_info = {
+#                     'type': 'soft_fact',
+#                     'fact': str(fact),
+#                     'log_probability': None
+#                 }
+                
+#                 # Try to get the probability of this soft fact
+#                 if hasattr(fact, 'get_log_probability'):
+#                     try:
+#                         log_prob = fact.get_log_probability()
+#                         soft_unif_info['log_probability'] = float(log_prob) if hasattr(log_prob, 'item') else float(log_prob)
+#                     except:
+#                         pass
+                
+#                 # Try to extract more details about the soft unification
+#                 if hasattr(fact, 'args') or hasattr(fact, 'arguments'):
+#                     args = getattr(fact, 'args', getattr(fact, 'arguments', []))
+#                     if len(args) >= 2:
+#                         soft_unif_info['term1'] = str(args[0])
+#                         soft_unif_info['term2'] = str(args[1])
+                
+#                 soft_unifications.append(soft_unif_info)
+        
+#         # Method 2: Extract from proof.value if it's a different algebra type
+#         elif hasattr(proof.value, 'log_probability'):
+#             soft_unifications.append({
+#                 'type': 'proof_value',
+#                 'log_probability': float(proof.value.log_probability) if hasattr(proof.value.log_probability, 'item') else float(proof.value.log_probability)
+#             })
+        
+#         # Method 3: Try to extract from the proof tree's soft unification cache
+#         if hasattr(prover, 'soft_unification_cache') and prover.soft_unification_cache:
+#             # Look for recent soft unifications that might be related to this proof
+#             for cache_key, cache_value in prover.soft_unification_cache.items():
+#                 if hasattr(cache_value, 'item'):
+#                     soft_unifications.append({
+#                         'type': 'cached_soft_unification',
+#                         'terms': str(cache_key),
+#                         'score': float(cache_value.item()) if hasattr(cache_value, 'item') else float(cache_value)
+#                     })
+        
+#         # Store comprehensive metadata for this proof
+#         proof_metadata[proof.query] = {
+#             'bbox_id': bbox_id,
+#             'variable_bindings': variable_bindings,
+#             'soft_unifications': soft_unifications,
+#             'proof_depth': getattr(proof, 'depth', 0),
+#             'proof_goals': [str(goal) for goal in getattr(proof, 'goals', [])],
+#             'proof_value_type': type(proof.value).__name__
+#         }
+        
+#         # Debug output
+#         if bbox_id or soft_unifications:
+#             print(f"PROOF METADATA for {proof.query}:")
+#             print(f"  bbox_id: {bbox_id}")
+#             print(f"  soft_unifications: {len(soft_unifications)} found")
+#             if soft_unifications:
+#                 for i, su in enumerate(soft_unifications[:3]):  # Show first 3
+#                     print(f"    {i}: {su}")
+        
+#         proofs[proof.query] = algebra.add(proofs[proof.query], proof.value)
+#         nb_proofs += 1
+    
+#     # Store metadata in the prover for later retrieval
+#     prover._last_proof_metadata = proof_metadata
+    
+#     print(f"TOTAL METADATA: Collected metadata for {len(proof_metadata)} proofs")
+    
+#     return dict(proofs), proof_tree.nb_steps, nb_proofs
+
+# DEBUGGING VERSION: Enhanced get_proofs with more detailed debugging
+# 
+import math
+def get_proofs(prover, algebra, **kwargs) -> tuple[dict[Expr, Value], int, int]:
+    """Enhanced get_proofs that captures variable bindings and soft unifications"""
     proof_tree = ProofTree(prover, algebra=algebra, **kwargs)
     proofs = defaultdict(algebra.zero)
+    proof_metadata = {}
     nb_proofs = 0
     
     for proof in proof_tree.get_proofs():
-        # print(f"Found proof: {proof.query}")
-        # print(f"  Goals: {proof.goals}")
-        # print(f"  Value: {proof.value}")
+        # Extract variable bindings (handles fresh variables)
+        variable_bindings = {}
+        target_object = None
+        bbox_id = None
+        
+        if hasattr(proof, 'current_bindings') and proof.current_bindings:
+            from deepsoftlog.algebraic_prover.terms.variable import Variable
+            
+            # Convert all bindings to string format
+            for var, val in proof.current_bindings.items():
+                var_name = var.name if isinstance(var, Variable) else str(var)
+                val_str = str(val)
+                variable_bindings[var_name] = val_str
+            
+            # Follow X variable chain to find target object
+            x_fresh_var = variable_bindings.get('X')
+            if x_fresh_var and x_fresh_var in variable_bindings:
+                target_object = variable_bindings[x_fresh_var]
+            
+            # Find first bbox_id (this is from target(X) :- object(X, Y))
+            for var_name, val in variable_bindings.items():
+                if isinstance(val, str) and (val.startswith('bbox') or val.startswith('att')):
+                    bbox_id = val
+                    break  # Take the first one (from target rule)
+        
+        # Extract soft unifications from proof.value
+        soft_unifications = []
+        
+        if hasattr(proof.value, 'pos_facts') and proof.value.pos_facts:
+            for fact in proof.value.pos_facts:
+                soft_unif_info = {
+                    'type': 'soft_fact',
+                    'fact': str(fact),
+                    'log_probability': None,
+                    'probability': None
+                }
+                
+                # Parse the soft fact to extract probability and terms
+                fact_str = str(fact)
+                
+                # Extract probability: "0.0021::k(term1,term2)" or "1::type(~x,~y)"
+                import re
+                prob_match = re.search(r'(\d+\.?\d*)::', fact_str)
+                if prob_match:
+                    prob_val = float(prob_match.group(1))
+                    soft_unif_info['probability'] = prob_val
+                    soft_unif_info['log_probability'] = math.log(prob_val) if prob_val > 0 else float('-inf')
+                
+                # Extract unification terms from k(term1,term2) pattern
+                k_match = re.search(r'k\(([^,]+),([^)]+)\)', fact_str)
+                if k_match:
+                    soft_unif_info['term1'] = k_match.group(1)
+                    soft_unif_info['term2'] = k_match.group(2)
+                    soft_unif_info['unification'] = f"{k_match.group(1)}~{k_match.group(2)}"
+                
+                # Extract type unifications: type(~x,~y)
+                type_match = re.search(r'type\(~?([^,]+),~?([^)]+)\)', fact_str)
+                if type_match:
+                    soft_unif_info['type_term1'] = type_match.group(1)
+                    soft_unif_info['type_term2'] = type_match.group(2)
+                    soft_unif_info['type_unification'] = f"{type_match.group(1)}~{type_match.group(2)}"
+                
+                soft_unifications.append(soft_unif_info)
+        
+        # Store comprehensive metadata for this proof
+        proof_metadata[proof.query] = {
+            'bbox_id': bbox_id,
+            'target_object': target_object,
+            'variable_bindings': variable_bindings,
+            'soft_unifications': soft_unifications,
+            'num_soft_unifications': len(soft_unifications),
+            'proof_depth': getattr(proof, 'depth', 0),
+            'proof_value_type': type(proof.value).__name__
+        }
+        
+        # Debug output
+        # print(f"PROOF METADATA for {proof.query}:")
+        # print(f"  bbox_id: {bbox_id}")
+        # print(f"  target_object: {target_object}")
+        # print(f"  soft_unifications: {len(soft_unifications)} found")
+        if soft_unifications:
+            for i, su in enumerate(soft_unifications[:2]):  # Show first 2
+                unif_str = su.get('unification', su.get('type_unification', 'unknown'))
+                prob = su.get('probability', 'N/A')
+                # print(f"    {i}: {unif_str} (prob: {prob})")
         
         proofs[proof.query] = algebra.add(proofs[proof.query], proof.value)
         nb_proofs += 1
     
-    # print(f"Proof collection complete: {nb_proofs} proofs in {proof_tree.nb_steps} steps")
+    # Store metadata in the prover for retrieval by evaluator
+    prover._last_proof_metadata = proof_metadata
     
-    # Check if no proofs found
-    if nb_proofs == 0:
-        # print("WARNING: No proofs found in proof tree")
-        # print(f"Proof tree stats:")
-        # print(f"  Steps: {proof_tree.nb_steps}")
-        # print(f"  Answers: {proof_tree.answers}")
-        # print(f"  Value: {proof_tree.value}")
-        
-        # Check for incomplete proofs with only object predicates
-        if hasattr(proof_tree, '_proof_history'):
-            near_complete = [p for _, p in proof_tree._proof_history 
-                           if p.goals and all(g.functor == "object" for g in p.goals)]
-            
-            # if near_complete:
-            #     # print(f"Found {len(near_complete)} proofs with only object predicates:")
-            #     for i, p in enumerate(near_complete[:3]):  # Show at most 3
-                    # print(f"  Near-complete proof {i}:")
-                    # print(f"    Query: {p.query}")
-                    # print(f"    Goals: {p.goals}")
-                    # print(f"    Value: {p.value}")
-                    # print(f"    is_complete(): {p.is_complete()}")
-                    
-                    # Look for soft unifications that should allow completion
-                    # if hasattr(p.value, 'pos_facts'):
-                    #     print(f"    Soft unifications: {p.value.pos_facts}")
+    # print(f"TOTAL: Collected metadata for {len(proof_metadata)} proofs")
     
-    # Return the results as normal - no artificial fixes
     return dict(proofs), proof_tree.nb_steps, nb_proofs

@@ -631,3 +631,6 @@ class ProofDebug(Proof):
     def _debug_print(self, message, level=0):
         indent = "  " * (self.depth + level)
         # print(f"{indent}DEBUG: {message}")
+        
+
+

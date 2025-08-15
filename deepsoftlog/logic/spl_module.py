@@ -246,6 +246,55 @@ class SoftProofModule(ProofModule):
         # Clear cache
         self.get_store().clear_cache()
 
+    # def update_clauses(self, DataInstance):
+    #     """Update clauses with scene graph, preserving existing vocabulary."""
+    #     # ... existing code up to vocabulary update ...
+        
+    #     # Update vocabulary
+    #     updated_vocabulary = Vocabulary().add_all(self.clauses)
+    #     self.get_store().vocabulary = updated_vocabulary
+        
+    #     # DEBUG: Check what's actually in the embedding store
+    #     store = self.get_store()
+    #     print(f"\n=== DEBUG EMBEDDING STORE CONTENTS ===")
+    #     print(f"Store has {len(store.constant_embeddings)} embeddings")
+        
+    #     # Check specifically for the problematic constants
+    #     problematic_constants = ['boat', 'car', 'dock', 'cap']
+    #     for const in problematic_constants:
+    #         is_present = const in store.constant_embeddings
+    #         print(f"  '{const}' in store: {is_present}")
+    #         if is_present:
+    #             embedding = store.constant_embeddings[const]
+    #             print(f"    Embedding norm: {embedding.norm().item():.6f}")
+        
+    #     # Show a sample of what IS in the store
+    #     sample_keys = list(store.constant_embeddings.keys())[:10]
+    #     print(f"Sample keys in store: {sample_keys}")
+        
+    #     # Add embeddings only for truly new constants
+    #     for constant in updated_vocabulary.get_constants():
+    #         # Skip if contains dots or is a reserved name
+    #         if '.' in constant or constant in ['cpu', 'cuda', 'to']:
+    #             continue
+                
+    #         # DEBUG: Check the specific lookup
+    #         is_in_store = constant in store.constant_embeddings
+    #         print(f"Checking constant '{constant}': in store = {is_in_store}")
+            
+    #         # Add embedding if not already present
+    #         if not is_in_store:
+    #             print(f"Initializing embedding for NEW constant: {constant}")
+    #             try:
+    #                 store.constant_embeddings[constant] = store.initializer(constant)
+    #             except Exception as e:
+    #                 print(f"Couldn't add embedding for {constant}, skipping")
+        
+    #     print(f"=== END DEBUG ===\n")
+        
+    #     # Clear cache
+    #     self.get_store().clear_cache()
+     
             
     def analyze_failed_proof(self, query: Expr):
         """Special function to analyze why a proof is failing"""
@@ -314,6 +363,41 @@ class SoftProofModule(ProofModule):
         print("\n=== END PROOF ANALYSIS ===\n")
         return result
 
+    
+
+    def get_proof_metadata(self, query_result):
+        """Get complete metadata for a query result"""
+        metadata = getattr(self, '_last_proof_metadata', {})
+        return metadata.get(query_result, {})
+
+    def get_bbox_id_for_query_simple(self, query_result):
+        """Simple, reliable bbox_id extraction"""
+        metadata = getattr(self, '_last_proof_metadata', {})
+        # print(f"Metadata for query {query_result}: {metadata}")
+        variable_bindings = metadata.get(query_result, {}).get('variable_bindings', {})
+        
+        # Find first bbox_id in the bindings (this is from target rule)
+        for var_name, val in variable_bindings.items():
+            if isinstance(val, str) and (val.startswith('bbox') or val.startswith('att')):
+                print(f"Found target bbox_id: {val}")
+                return val
+        
+        return None
+
+    def get_soft_unifications_for_query(self, query_result):
+        """Get soft unifications from proof metadata"""
+        metadata = self.get_proof_metadata(query_result)
+        soft_unifs = metadata.get('soft_unifications', [])
+        # print(f"Retrieved {len(soft_unifs)} soft unifications for query: {query_result}")
+        return soft_unifs
+
+    def get_variable_bindings_for_query(self, query_result):
+        """Get all variable bindings from proof metadata"""
+        metadata = self.get_proof_metadata(query_result)
+        bindings = metadata.get('variable_bindings', {})
+        # print(f"Retrieved variable bindings: {bindings} for query: {query_result}")
+        return bindings
+
 
 def _get_algebra(semantics, program):
     
@@ -341,85 +425,3 @@ class ExternalCut(External):
         return []
 
 
-class DebugSoftProofModule(SoftProofModule):
-    pass
-    def __init__(self, clauses: Iterable[Expr], embedding_metric: str = "l2", semantics: str = 'sdd2'):
-        super().__init__(clauses=clauses, embedding_metric=embedding_metric, semantics=semantics)
-        self.debug = True
-        
-    def all_matches(self, term: Expr) -> Iterable[tuple[Clause, dict, set]]:
-        predicate = term.get_predicate()
-        if self.debug:
-            print(f"\nDEBUG: Matching term: {term}")
-            print(f"DEBUG: Predicate: {predicate}")
-        
-        # First handle builtins
-        for builtin in self.get_builtins():
-            if predicate == builtin.predicate:
-                if self.debug:
-                    print(f"DEBUG: Found builtin match: {builtin.predicate}")
-                yield from builtin.get_answers(*term.arguments)
-
-        # Debug all available clauses
-        if self.debug:
-            print("\nDEBUG: Available clauses:")
-            for clause in self.clauses:
-                print(f"DEBUG: {clause}")
-
-        # Try to match with all clauses
-        for db_clause in self.clauses:
-            if self.debug:
-                print(f"\nDEBUG: Trying clause: {db_clause}")
-            
-            # Handle facts (clauses without body)
-            is_fact = isinstance(db_clause, Expr) or (
-                hasattr(db_clause, 'arguments') and 
-                len(db_clause.arguments) == 1
-            )
-            
-            db_head = db_clause if is_fact else db_clause.arguments[0]
-            
-            if self.debug:
-                print(f"DEBUG: Clause head: {db_head}")
-                print(f"DEBUG: Is fact: {is_fact}")
-            
-            if self.mask_query and db_head == self.queried:
-                if self.debug:
-                    print("DEBUG: Skipping masked query")
-                continue
-            
-            if db_head.get_predicate() == predicate:
-                if self.debug:
-                    print("DEBUG: Predicate matches")
-                
-                # For facts, use them directly; for rules, create fresh variables
-                working_clause = db_clause if is_fact else self.fresh_variables(db_clause)
-                working_head = working_clause if is_fact else working_clause.arguments[0]
-                
-                if self.debug:
-                    print(f"DEBUG: Attempting unification between:")
-                    print(f"DEBUG:   Term: {term}")
-                    print(f"DEBUG:   Head: {working_head}")
-                
-                result = self.mgu(term, working_head)
-                
-                if self.debug:
-                    print(f"DEBUG: MGU result: {result}")
-                
-                if result is not None:
-                    unifier, new_facts = result
-                    if is_fact:
-                        # For facts, create a simple clause
-                        new_clause = Clause(working_head, None)  # Adjust based on your Clause implementation
-                    else:
-                        new_clause = working_clause.apply_substitution(unifier)
-                    
-                    
-                    yield new_clause, unifier, new_facts
-
-    def query(self, *args, **kwargs):
-        if self.debug:
-            print("\nDEBUG: Starting new query")
-            print(f"DEBUG: Args: {args}")
-            print(f"DEBUG: Kwargs: {kwargs}")
-        return super().query(*args, **kwargs)

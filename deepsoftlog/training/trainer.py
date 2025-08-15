@@ -833,12 +833,74 @@ class Trainer:
         torch.save(checkpoint, save_path)
         print(f"Saved pretrained model to {save_path}")
         
+    # def load_pretrained_model(self, checkpoint_path, initial_program_path='initial_program.pl'):
+    #     """Load pretrained model with debugging"""
+        
+    #     checkpoint = torch.load(checkpoint_path, map_location='cpu')
+    #     print(f"Checkpoint has {len(checkpoint['vocabulary_constants'])} constants")
+    #     print(f"First 10 saved constants: {checkpoint['vocabulary_constants'][:10]}")
+        
+    #     # Parse the base program
+    #     from deepsoftlog.parser.parser import parse_file
+    #     pretrained_program = parse_file(
+    #         initial_program_path,
+    #         embedding_metric=checkpoint['embedding_metric'],
+    #         semantics=checkpoint['semantics'],
+    #     )
+        
+    #     # Recreate vocabulary
+    #     from deepsoftlog.parser.vocabulary import Vocabulary
+    #     vocab = Vocabulary()
+    #     for const in checkpoint['vocabulary_constants']:
+    #         vocab.add_constant(const)
+    #     for functor_str in checkpoint['vocabulary_functors']:
+    #         try:
+    #             vocab.add_functor(eval(functor_str))
+    #         except:
+    #             pass
+        
+    #     print(f"Reconstructed vocab has {len(vocab.get_constants())} constants")
+        
+    #     # Create store
+    #     from deepsoftlog.embeddings.initialize_vector import Initializer
+    #     from deepsoftlog.embeddings.nn_models import EmbeddingFunctor
+    #     from deepsoftlog.embeddings.embedding_store import EmbeddingStore
+        
+    #     initializer = Initializer(EmbeddingFunctor, 'uniform', checkpoint['embedding_dimensions'])
+    #     new_store = EmbeddingStore(checkpoint['embedding_dimensions'], initializer, vocab)
+        
+    #     print(f"Store created with {len(new_store.constant_embeddings)} embeddings")
+        
+    #     # Check a few embedding values BEFORE loading
+    #     test_embedding = 'chair' if 'chair' in new_store.constant_embeddings else list(new_store.constant_embeddings.keys())[0]
+    #     before_norm = new_store.constant_embeddings[test_embedding].norm().item()
+    #     print(f"BEFORE load_state_dict - {test_embedding} norm: {before_norm:.6f}")
+        
+    #     # Load state dict
+    #     missing_keys, unexpected_keys = new_store.load_state_dict(checkpoint['embedding_store_state_dict'], strict=False)
+    #     print(f"Missing keys: {len(missing_keys)}")
+    #     print(f"Unexpected keys: {len(unexpected_keys)}")
+    #     if missing_keys:
+    #         print(f"First 5 missing: {list(missing_keys)[:5]}")
+        
+    #     # Check the same embedding AFTER loading
+    #     after_norm = new_store.constant_embeddings[test_embedding].norm().item()
+    #     print(f"AFTER load_state_dict - {test_embedding} norm: {after_norm:.6f}")
+        
+    #     if abs(before_norm - after_norm) < 1e-6:
+    #         print("❌ PROBLEM: Embedding didn't change after loading!")
+    #     else:
+    #         print("✅ Good: Embedding changed after loading")
+        
+    #     pretrained_program.store = new_store
+    #     return pretrained_program
+    
+    
     def load_pretrained_model(self, checkpoint_path, initial_program_path='initial_program.pl'):
         """Load pretrained model with debugging"""
         
         checkpoint = torch.load(checkpoint_path, map_location='cpu')
-        print(f"Checkpoint has {len(checkpoint['vocabulary_constants'])} constants")
-        print(f"First 10 saved constants: {checkpoint['vocabulary_constants'][:10]}")
+        print(f"🔍 Step 1: Loaded checkpoint")
         
         # Parse the base program
         from deepsoftlog.parser.parser import parse_file
@@ -847,8 +909,9 @@ class Trainer:
             embedding_metric=checkpoint['embedding_metric'],
             semantics=checkpoint['semantics'],
         )
+        print(f"🔍 Step 2: After parse_file, program.store has {len(pretrained_program.store.constant_embeddings)} embeddings")
         
-        # Recreate vocabulary
+        # Create new store with loaded embeddings
         from deepsoftlog.parser.vocabulary import Vocabulary
         vocab = Vocabulary()
         for const in checkpoint['vocabulary_constants']:
@@ -859,9 +922,6 @@ class Trainer:
             except:
                 pass
         
-        print(f"Reconstructed vocab has {len(vocab.get_constants())} constants")
-        
-        # Create store
         from deepsoftlog.embeddings.initialize_vector import Initializer
         from deepsoftlog.embeddings.nn_models import EmbeddingFunctor
         from deepsoftlog.embeddings.embedding_store import EmbeddingStore
@@ -869,31 +929,30 @@ class Trainer:
         initializer = Initializer(EmbeddingFunctor, 'uniform', checkpoint['embedding_dimensions'])
         new_store = EmbeddingStore(checkpoint['embedding_dimensions'], initializer, vocab)
         
-        print(f"Store created with {len(new_store.constant_embeddings)} embeddings")
-        
-        # Check a few embedding values BEFORE loading
-        test_embedding = 'chair' if 'chair' in new_store.constant_embeddings else list(new_store.constant_embeddings.keys())[0]
-        before_norm = new_store.constant_embeddings[test_embedding].norm().item()
-        print(f"BEFORE load_state_dict - {test_embedding} norm: {before_norm:.6f}")
+        print(f"🔍 Step 3: Created new_store with {len(new_store.constant_embeddings)} embeddings")
         
         # Load state dict
         missing_keys, unexpected_keys = new_store.load_state_dict(checkpoint['embedding_store_state_dict'], strict=False)
-        print(f"Missing keys: {len(missing_keys)}")
-        print(f"Unexpected keys: {len(unexpected_keys)}")
-        if missing_keys:
-            print(f"First 5 missing: {list(missing_keys)[:5]}")
+        print(f"🔍 Step 4: After load_state_dict, new_store has {len(new_store.constant_embeddings)} embeddings")
         
-        # Check the same embedding AFTER loading
-        after_norm = new_store.constant_embeddings[test_embedding].norm().item()
-        print(f"AFTER load_state_dict - {test_embedding} norm: {after_norm:.6f}")
-        
-        if abs(before_norm - after_norm) < 1e-6:
-            print("❌ PROBLEM: Embedding didn't change after loading!")
-        else:
-            print("✅ Good: Embedding changed after loading")
+        # Check the store assignment
+        print(f"🔍 Step 5: BEFORE assignment - pretrained_program.store has {len(pretrained_program.store.constant_embeddings)} embeddings")
+        print(f"🔍 Step 5: BEFORE assignment - new_store has {len(new_store.constant_embeddings)} embeddings")
+        print(f"🔍 Step 5: pretrained_program.store id: {id(pretrained_program.store)}")
+        print(f"🔍 Step 5: new_store id: {id(new_store)}")
         
         pretrained_program.store = new_store
-        return pretrained_program
+        
+        print(f"🔍 Step 6: AFTER assignment - pretrained_program.store has {len(pretrained_program.store.constant_embeddings)} embeddings")
+        print(f"🔍 Step 6: pretrained_program.store id: {id(pretrained_program.store)}")
+        print(f"🔍 Step 6: Are they the same object? {pretrained_program.store is new_store}")
+        
+        # Test get_store() too
+        get_store_result = pretrained_program.get_store()
+        print(f"🔍 Step 7: get_store() returns {len(get_store_result.constant_embeddings)} embeddings")
+        print(f"🔍 Step 7: get_store() id: {id(get_store_result)}")
+        
+        return pretrained_program   
 
 
 

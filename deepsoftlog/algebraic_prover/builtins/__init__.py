@@ -268,8 +268,8 @@ class TypeExternal(External):
                     # print(f"log_score requires_grad: {log_score.requires_grad}")
                     
             except Exception as e:
-                print(f"Error calculating soft unification: {e}")
-                log_score = -5.0  # Fallback
+                # print(f"Error calculating soft unification: {e}")
+                log_score = -10.0  # Fallback
         
         # Create the fact expression
         type_expr = Expr("type", t1, t2)
