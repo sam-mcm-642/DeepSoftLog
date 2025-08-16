@@ -238,7 +238,7 @@ class ProofModule:
         
         if len(result) != len(filtered_result):
             pass
-            # print(f"Filtered out {len(result) - len(filtered_result)} zero results")
+            print(f"Filtered out {len(result) - len(filtered_result)} zero results")
         
         # print(f"Final result: {filtered_result}")
         
@@ -618,17 +618,6 @@ def get_proofs(prover, algebra, **kwargs) -> tuple[dict[Expr, Value], int, int]:
                 
                 soft_unifications.append(soft_unif_info)
         
-        # Store comprehensive metadata for this proof
-        proof_metadata[proof.query] = {
-            'bbox_id': bbox_id,
-            'target_object': target_object,
-            'variable_bindings': variable_bindings,
-            'soft_unifications': soft_unifications,
-            'num_soft_unifications': len(soft_unifications),
-            'proof_depth': getattr(proof, 'depth', 0),
-            'proof_value_type': type(proof.value).__name__
-        }
-        
         # Debug output
         # print(f"PROOF METADATA for {proof.query}:")
         # print(f"  bbox_id: {bbox_id}")
@@ -639,6 +628,26 @@ def get_proofs(prover, algebra, **kwargs) -> tuple[dict[Expr, Value], int, int]:
                 unif_str = su.get('unification', su.get('type_unification', 'unknown'))
                 prob = su.get('probability', 'N/A')
                 # print(f"    {i}: {unif_str} (prob: {prob})")
+        
+        # SIMPLE FIX: Make unique key to prevent overwrites
+        if bbox_id:
+            unique_key = f"{proof.query}__{bbox_id}"
+        else:
+            unique_key = f"{proof.query}__{nb_proofs}"  # Use proof counter as fallback
+
+        # Store comprehensive metadata for this proof using the UNIQUE KEY
+        proof_metadata[unique_key] = {  # ← Changed from proof.query to unique_key
+            'bbox_id': bbox_id,
+            'target_object': target_object,
+            'variable_bindings': variable_bindings,
+            'soft_unifications': soft_unifications,
+            'num_soft_unifications': len(soft_unifications),
+            'proof_depth': getattr(proof, 'depth', 0),
+            'proof_value_type': type(proof.value).__name__
+        }
+
+
+        proofs[unique_key] = algebra.add(proofs[unique_key], proof.value)
         
         proofs[proof.query] = algebra.add(proofs[proof.query], proof.value)
         nb_proofs += 1

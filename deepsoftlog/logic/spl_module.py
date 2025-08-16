@@ -424,4 +424,21 @@ class ExternalCut(External):
             return [(fact, {}, set())]
         return []
 
-
+class DebugSoftProofModule(SoftProofModule):
+    """
+    Debugging version of SoftProofModule that prints additional information
+    about the proof process, especially when filtering out zero results.
+    """
+    
+    def query(self, *args, **kwargs):
+        result = super().query(*args, **kwargs)
+        
+        if isinstance(result, dict):
+            # Filter out zero results
+            filtered_result = {k: v for k, v in result.items() if v != 0}
+            return filtered_result
+        
+        return result
+    
+    def _post_process_query_result(self, result):
+        filtered_result = {k: v for k, v in result.items() if v != 0}

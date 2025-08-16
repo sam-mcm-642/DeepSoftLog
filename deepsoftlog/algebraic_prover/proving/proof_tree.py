@@ -68,7 +68,7 @@ class ProofTree:
     def get_proofs(self) -> Iterator[Proof]:
         """More aggressive approach to finding proofs"""
         attempts = 0
-        while not self.queue.empty() and attempts < 2000 and len(self.proofs) < self.get_max_proofs():
+        while not self.queue.empty() and attempts < 2500 and len(self.proofs) < self.get_max_proofs():
             attempts += 1
             # print(f"PROOF ATTEMPT: {attempts}, Proofs found: {len(self.proofs)}")
             
