@@ -23,7 +23,6 @@ def train(cfg):
     trainer.search_args['max_proofs'] = 1
     trainer.eval(eval_dataloader)
 
-    # for debugging
     for c in ("0", "1", "ns1", "ns2", "halts", "start", "w1", "w2", "w3", "w4"):
         try:
             v = program.store(Constant(c)).abs().detach()
@@ -35,7 +34,6 @@ def train(cfg):
     for label in (0, 1):
         vs = []
         for img in DIGIT_IMAGES["training"][label][:20]:
-            # print(img, label)
             prolog_img = to_prolog_image(img).arguments[0]
             v = program.store(prolog_img).abs().detach()
             v /= v.sum()

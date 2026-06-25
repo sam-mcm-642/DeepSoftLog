@@ -4,6 +4,12 @@
 
 DeepSoftLog is a neuro-symbolic framework which adds embeddings and neural networks to probabilistic logic programming using soft-unification.
 
+> **Note:** This is a fork of DeepSoftLog (Maene & De Raedt — see the paper below),
+> extended with changes to the proof system and embedding handling for a master's thesis
+> on **referring-expression comprehension** (used by
+> [DeepSoftLog-REC](https://github.com/sam-mcm-642/DeepSoftLog-REC)). All credit for the
+> original library belongs to the upstream authors.
+
 
 ## Install
 

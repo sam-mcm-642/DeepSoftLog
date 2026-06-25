@@ -52,7 +52,6 @@ def mine_negatives(positives: set, nb_negatives: int, lengths):
 
 def strs_to_prolog_image_lists(data, train: bool):
     digit_lambda = lambda d: get_digit(d, train=train)
-    # digit_lambda = lambda d: SoftTerm(Constant(d))
     return [to_prolog_list(d, digit_lambda) for d in data]
 
 

@@ -130,7 +130,4 @@ def run_tensor_bench(max_n: int, nb_repeats: int):
 
 
 if __name__ == "__main__":
-    # run_tensor_bench(20, 100)
-    # write_program(0)
     plot_bench()
-    # run_problog_bench()

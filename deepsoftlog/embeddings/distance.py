@@ -5,11 +5,7 @@ from torch.nn import functional as F
 from deepsoftlog.algebraic_prover.algebras import safe_log
 
 
-# def embedding_similarity(x: Tensor, y: Tensor, distance_metric: str):
 #     """Returns a negative distance of two vectors in [0, 1]"""
-#     distance = -_get_distance(x, y, distance_metric)
-#     assert not torch.isnan(distance), f"Distance {distance_metric} is NaN: {x}, {y}"
-#     return distance
 
 def embedding_similarity(x: Tensor, y: Tensor, distance_metric: str):
     """Returns a negative distance of two vectors in [0, 1]"""
@@ -60,11 +56,8 @@ def normalised_l2_distance(x: Tensor, y: Tensor, scale: float = 2):
     return torch.linalg.norm(x - y) * scale
 
 
-# def angular_distance(x: Tensor, y: Tensor, scale: float = 4, eps=1e-6):
-#     cosine_similarity = torch.nn.functional.cosine_similarity(x, y, 0)
 #     # careful: d\dx exp^(-arccos(x)) approaches infinity for x=1
 #     cosine_similarity -= eps
-#     return torch.arccos(cosine_similarity) * scale
 
 
 def angular_distance(x: Tensor, y: Tensor, scale: float = 4, eps=1e-6):

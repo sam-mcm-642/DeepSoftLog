@@ -141,16 +141,8 @@ class Trainer:
         profiler.stop()
         profiler.open_in_browser()
 
-    # def train_epoch(self, verbose: bool):
         
-    #     for queries in tqdm(self.train_dataset, leave=False, smoothing=0, disable=not verbose):
-    #         current_time = time()
     #         loss, diff, proof_steps, nb_proofs = self.get_loss(queries)
-    #         grad_norm = 0.
-    #         if loss is not None:
-    #             grad_norm = self.step_optimizer()
-    #         if verbose:
-    #             self.logger.log({
     #                 'grad_norm': grad_norm,
     #                 'loss': loss,
     #                 'diff': diff,
@@ -158,24 +150,18 @@ class Trainer:
     #                 "proof_steps": proof_steps,
     #                 "nb_proofs": nb_proofs,
     #             })
-    #     if verbose:
-    #         self.logger.print()
-    #     print("EPOCH END")
     
     # Add this function to your class - outside train_epoch
     def debug_soft_unifications_in_proof(self, proof_result, query):
         """Extract detailed soft unification statistics from a proof result"""
-        print(f"\n=== DEBUG INFO FOR QUERY: {query} ===")
         
         # Track all soft unifications across all proofs
         all_soft_unifs = {}
         
         # Print proof result structure
-        print(f"Proof result type: {type(proof_result)}")
         
         # For dictionary results (which is what SoftProofModule.query returns)
         if isinstance(proof_result, dict):
-            print(f"Result keys: {list(proof_result.keys())}")
             
             # Look for keys with 'k(' in them - these are soft unification facts
             for key in proof_result.keys():
@@ -194,40 +180,16 @@ class Trainer:
                             else:
                                 prob = float(prob_value)
                             all_soft_unifs[unif_key] = prob
-                            print(f"Found soft unification: {unif_key} with probability {prob}")
                     except Exception as e:
                         print(f"Error processing key {key}: {e}")
         
         # Check embedding parameters and their gradients
-        # print("\nEMBEDDING PARAMETER CHECK:")
-        # for term in ['dog', 'cat', 'animal']:
-        #     try:
-        #         if term in self.program.store.constant_embeddings:
-        #             emb = self.program.store.constant_embeddings[term]
-        #             print(f"  {term}:")
-        #             print(f"    Type: {type(emb)}")
-        #             print(f"    Requires grad: {emb.requires_grad}")
-        #             print(f"    Has grad: {emb.grad is not None}")
                     
         #             # Show gradient info if available
-        #             if emb.grad is not None:
-        #                 print(f"    Grad norm: {torch.norm(emb.grad).item()}")
-        #                 print(f"    Grad mean: {emb.grad.mean().item()}")
                     
         #             # Fix embeddings that don't require gradients
-        #             if not emb.requires_grad:
-        #                 print(f"  WARNING: {term} embedding doesn't require gradients!")
-        #                 self.program.store.constant_embeddings[term].requires_grad_(True)
-        #                 print(f"  Set requires_grad=True for {term}")
-        #         else:
-        #             print(f"  {term}: Not found in constant_embeddings")
-        #     except Exception as e:
-        #         print(f"  Error checking {term}: {e}")
         
         # # Print summary of findings
-        # print("\nSOFT UNIFICATION SUMMARY:")
-        # for key, prob in all_soft_unifs.items():
-        #     print(f"  {key}: {prob}")
         
         return all_soft_unifs
 
@@ -265,11 +227,7 @@ class Trainer:
                 if term in store.constant_embeddings:
                     emb = store.constant_embeddings[term]
                     print(f"  {term}:")
-                    print(f"    Type: {type(emb)}")
-                    print(f"    Requires grad: {emb.requires_grad}")
-                    print(f"    Has grad: {emb.grad is not None}")
                     if emb.grad is not None:
-                        print(f"    Grad norm: {torch.norm(emb.grad).item()}")
                         print(f"    Grad mean: {emb.grad.mean().item()}")
                 else:
                     print(f"  {term}: Not found in constant_embeddings")
@@ -281,35 +239,27 @@ class Trainer:
         total_params = 0
         params_without_grad = 0
         
-        # print("PARAMETER GRADIENT STATUS:")
         
         # Check embeddings in the store
         if hasattr(program, 'store') and hasattr(program.store, 'constant_embeddings'):
-            # print("\nCONSTANT EMBEDDINGS:")
             for name, param in program.store.constant_embeddings.items():
                 total_params += 1
                 if not hasattr(param, 'grad') or param.grad is None:
                     params_without_grad += 1
-                    # print(f"Embedding {name} has no gradient")
                 else:
                     grad_norm = torch.norm(param.grad).item()
-                    # print(f"Embedding {name} - grad norm: {grad_norm:.6f}")
         
         # Check all parameters using the parameters() method
         try:
-            # print("\nALL PARAMETERS:")
             for param in program.parameters():
                 total_params += 1
                 if param.grad is None:
                     params_without_grad += 1
-                    # print(f"Parameter has no gradient")
                 else:
                     grad_norm = torch.norm(param.grad).item()
-                    # print(f"Parameter - grad norm: {grad_norm:.6f}")
         except Exception as e:
             print(f"Error checking parameters: {e}")
         
-        # print(f"{params_without_grad} out of {total_params} parameters have no gradients")
 
     def get_embedding_debug_info(store, term1, term2):
         result = {}
@@ -384,7 +334,6 @@ class Trainer:
     
     def debug_instance_evaluations(self):
         """Directly examine each training instance's evaluation"""
-        print("\n=== DIRECT INSTANCE EVALUATION ===")
         
         # Get the dataset (assuming train_dataset is iterable)
         for batch_idx, batch in enumerate(self.train_dataset):
@@ -397,8 +346,6 @@ class Trainer:
                 # Extract the query directly
                 if hasattr(instance, 'query'):
                     query = instance.query
-                    print(f"    Query type: {type(query)}")
-                    print(f"    Query content: {query}")
                     
                     # If there's a target probability
                     if hasattr(instance.query, 'p'):
@@ -406,14 +353,11 @@ class Trainer:
                     
                     # Execute the query directly
                     try:
-                        print("    Executing query...")
                         result = self.program.query(query.query)
-                        print(f"    Result type: {type(result)}")
                         print(f"    Result: {result}")
                         
                         # Check for soft unifications
                         if isinstance(result, dict):
-                            print("    Soft unifications used:")
                             print(result)
                             for key, value in result.items():
                                 if 'k(' in str(key):
@@ -435,107 +379,39 @@ class Trainer:
         
 
 
-    # def train_epoch(self, verbose: bool):
     #     """Training epoch with proper handling of DatasetInstance objects"""
     #     # Clear the soft unification cache at the start of the epoch
-    #     if hasattr(self.program, 'soft_unification_cache'):
-    #         self.program.soft_unification_cache = {}
         
     #     # Initialize tracking
-    #     epoch_data = []
         
-    #     for batch_idx, instances in enumerate(tqdm(self.train_dataset, leave=False, smoothing=0, disable=not verbose)):
-    #         current_time = time()
             
     #         # Track embedding similarities before optimization
-    #         similarities = {}
-    #         if hasattr(self.program.store, 'constant_embeddings'):
-    #             embeddings = self.program.store.constant_embeddings
-    #             pairs = [('dog', 'animal'), ('cat', 'animal')]
                 
-    #             for term1, term2 in pairs:
-    #                 if term1 in embeddings and term2 in embeddings:
-    #                     emb1 = embeddings[term1]
-    #                     emb2 = embeddings[term2]
-    #                     sim = F.cosine_similarity(emb1, emb2, dim=0).item()
     #                     similarities[f'{term1}_{term2}'] = sim
-    #                     print(f"Before optimization: {term1}-{term2} similarity = {sim:.6f}")
             
     #         # Debug: print instance and query structure
-    #         try:
-    #             if len(instances) > 0:
-    #                 instance = instances[0]
-    #                 print(f"\nInstance type: {type(instance)}")
                     
     #                 # Access the query properly
-    #                 if hasattr(instance, 'query'):
-    #                     query_obj = instance.query
-    #                     print(f"Query object type: {type(query_obj)}")
                         
     #                     # Convert to prolog query if needed
-    #                     if 'query_to_prolog' in globals() and not isinstance(query_obj, Query):
-    #                         print("Converting query to prolog format")
-    #                         prolog_query = query_to_prolog(query_obj)
-    #                     else:
-    #                         prolog_query = query_obj
                             
-    #                     print(f"Final query: {prolog_query}")
                         
     #                     # Try executing the query
-    #                     try:
-    #                         result = self.program.query(prolog_query.query, **self.search_args)
                             
     #                         # Look for soft unifications in the result
-    #                         print("\nSoft unifications in result:")
-    #                         for key, value in result.items():
-    #                             key_str = str(key)
-    #                             if 'k(' in key_str:
-    #                                 print(f"  {key}: {value}")
-    #                     except Exception as e:
-    #                         print(f"Error executing sample query: {e}")
-    #         except Exception as e:
-    #             print(f"Error inspecting data: {e}")
             
     #         # Normal loss calculation and optimization
     #         loss, diff, proof_steps, nb_proofs = self.get_loss(instances)
-    #         print(f"Epoch {self.current_epoch}, Batch {batch_idx}")
-    #         print((f"Loss: {loss}, Diff: {diff}, Proof steps: {proof_steps}, Number of proofs: {nb_proofs}"))
-    #         print(f"Query: {instances[0].query}")
-    #         print(f"target: {instances[0].target}")
     #         # Check gradients before optimizer step
-    #         if hasattr(self.program.store, 'constant_embeddings'):
-    #             embeddings = self.program.store.constant_embeddings
-    #             terms = ['dog', 'cat', 'animal']
                 
-    #             print("\nGradient check before optimizer step:")
-    #             for term in terms:
-    #                 if term in embeddings:
-    #                     emb = embeddings[term]
-    #                     has_grad = emb.grad is not None
-    #                     grad_norm = torch.norm(emb.grad).item() if has_grad else 0
-    #                     print(f"  {term}: requires_grad={emb.requires_grad}, has_grad={has_grad}, grad_norm={grad_norm:.6f}")
             
     #         # Perform optimization step
-    #         grad_norm = 0.
-    #         if loss is not None:
-    #             grad_norm = self.step_optimizer()
                 
     #         # Check similarities after optimization
-    #         if hasattr(self.program.store, 'constant_embeddings'):
-    #             embeddings = self.program.store.constant_embeddings
                 
-    #             print("\nAfter optimization:")
-    #             for pair, before_sim in similarities.items():
     #                 term1, term2 = pair.split('_')
-    #                 if term1 in embeddings and term2 in embeddings:
-    #                     emb1 = embeddings[term1]
-    #                     emb2 = embeddings[term2]
-    #                     after_sim = F.cosine_similarity(emb1, emb2, dim=0).item()
-    #                     print(f"  {term1}-{term2}: {before_sim:.6f} → {after_sim:.6f}")
             
     #         # Standard logging
-    #         if verbose:
-    #             self.logger.log({
     #                 'grad_norm': grad_norm,
     #                 'loss': loss,
     #                 'diff': diff,
@@ -545,17 +421,9 @@ class Trainer:
     #             })
         
     #     # At the end of the epoch
-    #     self.debug_instance_evaluations()
         
-    #     if verbose:
-    #         self.logger.print()
-    #     print("EPOCH END")
         
     #     # Increment epoch counter if you're tracking it
-    #     if hasattr(self, 'current_epoch'):
-    #         self.current_epoch += 1
-    #     else:
-    #         self.current_epoch = 1
     
     
     def train_epoch(self, verbose: bool):
@@ -591,8 +459,6 @@ class Trainer:
             # Get query and target info
             query_str = str(instances[0].query) if hasattr(instances[0], 'query') else 'unknown'
             target_str = str(instances[0].target) if hasattr(instances[0], 'target') else 'unknown'
-            # print(f"Query: {query_str}")
-            # print(f"Target: {target_str}")
             
             # Log to CSV
             with open(csv_file, 'a') as f:
@@ -629,20 +495,7 @@ class Trainer:
         # ADD THIS LINE:
         self.check_embedding_changes(self.current_epoch - 1)
 
-    # def eval(self, dataloader: DataLoader, name='test'):
-    #     self.program.store.eval()
-    #     metrics = []
-    #     print(f"DataLoader: {dataloader}")
-    #     for queries in tqdm(dataloader, leave=False, smoothing=0):
-    #         print(f"Queries type:{type(queries[0])}")
-    #         queries = [q.query if hasattr(q, "query") else q for q in queries]
-    #         print(f"Queries type:{type(queries[0])}")
-    #         results = zip(queries, self._eval_queries(queries))
-    #         print(f"Results: {results}")
-    #         print(f"Queries type:{type(queries[0])}")
-    #         new_metrics = [get_metrics(query.query, result, queries) for query, result in results]
     #         metrics += new_metrics
-    #     self.logger.log_eval(aggregate_metrics(metrics), name=name)
     
     def eval(self, dataloader: DataLoader, name='test'):
         print("EVALUATION STARTING")
@@ -651,13 +504,11 @@ class Trainer:
         print(f"DataLoader: {dataloader}")
         for instance in dataloader.dataset.instances:
             if not isinstance(instance.query, Query):
-                print(f"Instance query type: {type(instance.query)}")
                 instance.query = query_to_prolog(instance.query)
 
         for queries in tqdm(dataloader, leave=False, smoothing=0):
 
             if not isinstance(queries, Query): 
-                print(f"Queries type:{type(queries[0])}") 
                 queries = [q.query for q in queries]
 
             results = zip(queries, self._eval_queries(queries))
@@ -685,7 +536,6 @@ class Trainer:
     def _query_result(self, queries: Iterable[Query]):
         for query in queries:
             print("_query_result called, type:")
-            print(type(query))
             print(query)
             yield self.program.query(query.query, **self.search_args)
 
@@ -715,19 +565,10 @@ class Trainer:
         return float(loss), float(np.mean(errors)), proof_steps, nb_proofs
 
     
-    # def step_optimizer(self):
-    #     with torch.no_grad():
-    #         if self.grad_clip is not None:
     #             torch.nn.utils.clip_grad_norm_(self.program.parameters(), max_norm=self.grad_clip)
-    #         grad_norm = self.program.grad_norm()
-    #     self.optimizer.step()
-    #     self.optimizer.zero_grad(set_to_none=True)
-    #     self.get_store().clear_cache()
-    #     return float(grad_norm)
     
     def step_optimizer(self):
         # Print gradient norms for different parts of the model
-        # print("=== Gradient Information ===")
         
         # Check embedding gradients
         empty_grads = 0
@@ -736,10 +577,8 @@ class Trainer:
             total_params += 1
             if param.grad is None:
                 empty_grads += 1
-                # print(f"Parameter {name} has no gradient")
             else:
                 grad_norm = param.grad.norm().item()
-                # print(f"Parameter {name}: grad_norm = {grad_norm}")
         
         print(f"{empty_grads} out of {total_params} parameters have no gradients")
         
@@ -750,7 +589,6 @@ class Trainer:
             grad_norm = self.program.grad_norm()
         # In your trainer, right before optimizer.step():
         print(f"About to step optimizer with {sum(len(g['params']) for g in self.optimizer.param_groups)} parameters")
-        print(f"Store has {len(self.program.store.constant_embeddings)} embeddings")
         self.optimizer.step()
         self.optimizer.zero_grad(set_to_none=True)
         self.get_store().clear_cache()
@@ -770,33 +608,17 @@ class Trainer:
     def get_store(self):
         return self.program.get_store()
     
-    # def update_optimizer_if_needed(self):
     #     """Update optimizer if new parameters were added"""
-    #     current_param_count = sum(len(group['params']) for group in self.optimizer.param_groups)
-    #     expected_constant_params = len(self.program.store.constant_embeddings)
-    #     expected_functor_params = sum(len(list(model.parameters())) for model in self.program.store.functor_embeddings.values())
-    #     expected_total = expected_constant_params + expected_functor_params
         
-    #     if current_param_count < expected_total:
-    #         print(f"Updating optimizer: {current_param_count} -> {expected_total} parameters")
-    #         from deepsoftlog.training.loss import get_optimizer
-    #         self.optimizer = get_optimizer(self.program.get_store(),
-    #         self.config)
     
     def update_optimizer_if_needed(self):
         """Update optimizer if new parameters were added"""
-        # print("Checking if optimizer needs update...")
         current_param_count = sum(len(group['params']) for group in self.optimizer.param_groups)
-        # print(f"Current optimizer has {current_param_count} parameters")
         expected_constant_params = len(self.program.store.constant_embeddings)
-        # print(f"Expected constant parameters: {expected_constant_params}")
-        # print(f"Constant embeddings: {self.program.store.constant_embeddings.keys()}")
-        # print(f"Functor embeddings: {self.program.store.functor_embeddings.keys()}")
         expected_functor_params = sum(len(list(model.parameters())) for model in self.program.store.functor_embeddings.values())
         expected_total = expected_constant_params + expected_functor_params
         
         if current_param_count < expected_total:
-            # print(f"Updating optimizer: {current_param_count} -> {expected_total} parameters")
             
             # Extract config from existing optimizer
             config = {
@@ -808,7 +630,6 @@ class Trainer:
             
             from deepsoftlog.training.loss import get_optimizer
             self.optimizer = get_optimizer(self.program.get_store(), config)
-            # print(f"Recreated optimizer with {sum(len(g['params']) for g in self.optimizer.param_groups)} parameters")
     def save_pretrained_model(self, save_path):
         """Save all components needed to reload pretrained model"""
         
@@ -821,7 +642,6 @@ class Trainer:
             'embedding_metric': self.program.embedding_metric,
             'semantics': self.program.semantics,
             
-            # Vocabulary (critical for knowing which embeddings exist)
             'vocabulary_constants': list(self.program.store.vocabulary.get_constants()),
             'vocabulary_functors': [str(sig) for sig in self.program.store.vocabulary.get_functors()],
             
@@ -833,67 +653,31 @@ class Trainer:
         torch.save(checkpoint, save_path)
         print(f"Saved pretrained model to {save_path}")
         
-    # def load_pretrained_model(self, checkpoint_path, initial_program_path='initial_program.pl'):
     #     """Load pretrained model with debugging"""
         
-    #     checkpoint = torch.load(checkpoint_path, map_location='cpu')
-    #     print(f"Checkpoint has {len(checkpoint['vocabulary_constants'])} constants")
-    #     print(f"First 10 saved constants: {checkpoint['vocabulary_constants'][:10]}")
         
     #     # Parse the base program
-    #     from deepsoftlog.parser.parser import parse_file
-    #     pretrained_program = parse_file(
     #         initial_program_path,
-    #         embedding_metric=checkpoint['embedding_metric'],
-    #         semantics=checkpoint['semantics'],
     #     )
         
     #     # Recreate vocabulary
-    #     from deepsoftlog.parser.vocabulary import Vocabulary
-    #     vocab = Vocabulary()
-    #     for const in checkpoint['vocabulary_constants']:
     #         vocab.add_constant(const)
-    #     for functor_str in checkpoint['vocabulary_functors']:
-    #         try:
     #             vocab.add_functor(eval(functor_str))
-    #         except:
-    #             pass
         
-    #     print(f"Reconstructed vocab has {len(vocab.get_constants())} constants")
         
     #     # Create store
-    #     from deepsoftlog.embeddings.initialize_vector import Initializer
-    #     from deepsoftlog.embeddings.nn_models import EmbeddingFunctor
-    #     from deepsoftlog.embeddings.embedding_store import EmbeddingStore
         
-    #     initializer = Initializer(EmbeddingFunctor, 'uniform', checkpoint['embedding_dimensions'])
-    #     new_store = EmbeddingStore(checkpoint['embedding_dimensions'], initializer, vocab)
         
-    #     print(f"Store created with {len(new_store.constant_embeddings)} embeddings")
         
     #     # Check a few embedding values BEFORE loading
-    #     test_embedding = 'chair' if 'chair' in new_store.constant_embeddings else list(new_store.constant_embeddings.keys())[0]
-    #     before_norm = new_store.constant_embeddings[test_embedding].norm().item()
-    #     print(f"BEFORE load_state_dict - {test_embedding} norm: {before_norm:.6f}")
         
     #     # Load state dict
     #     missing_keys, unexpected_keys = new_store.load_state_dict(checkpoint['embedding_store_state_dict'], strict=False)
-    #     print(f"Missing keys: {len(missing_keys)}")
-    #     print(f"Unexpected keys: {len(unexpected_keys)}")
-    #     if missing_keys:
-    #         print(f"First 5 missing: {list(missing_keys)[:5]}")
         
     #     # Check the same embedding AFTER loading
-    #     after_norm = new_store.constant_embeddings[test_embedding].norm().item()
-    #     print(f"AFTER load_state_dict - {test_embedding} norm: {after_norm:.6f}")
         
-    #     if abs(before_norm - after_norm) < 1e-6:
-    #         print("❌ PROBLEM: Embedding didn't change after loading!")
-    #     else:
-    #         print("✅ Good: Embedding changed after loading")
         
     #     pretrained_program.store = new_store
-    #     return pretrained_program
     
     
     def load_pretrained_model(self, checkpoint_path, initial_program_path='initial_program.pl'):
@@ -909,7 +693,6 @@ class Trainer:
             embedding_metric=checkpoint['embedding_metric'],
             semantics=checkpoint['semantics'],
         )
-        print(f"🔍 Step 2: After parse_file, program.store has {len(pretrained_program.store.constant_embeddings)} embeddings")
         
         # Create new store with loaded embeddings
         from deepsoftlog.parser.vocabulary import Vocabulary
@@ -929,28 +712,18 @@ class Trainer:
         initializer = Initializer(EmbeddingFunctor, 'uniform', checkpoint['embedding_dimensions'])
         new_store = EmbeddingStore(checkpoint['embedding_dimensions'], initializer, vocab)
         
-        print(f"🔍 Step 3: Created new_store with {len(new_store.constant_embeddings)} embeddings")
         
         # Load state dict
         missing_keys, unexpected_keys = new_store.load_state_dict(checkpoint['embedding_store_state_dict'], strict=False)
-        print(f"🔍 Step 4: After load_state_dict, new_store has {len(new_store.constant_embeddings)} embeddings")
         
         # Check the store assignment
-        print(f"🔍 Step 5: BEFORE assignment - pretrained_program.store has {len(pretrained_program.store.constant_embeddings)} embeddings")
-        print(f"🔍 Step 5: BEFORE assignment - new_store has {len(new_store.constant_embeddings)} embeddings")
-        print(f"🔍 Step 5: pretrained_program.store id: {id(pretrained_program.store)}")
-        print(f"🔍 Step 5: new_store id: {id(new_store)}")
         
         pretrained_program.store = new_store
         
-        print(f"🔍 Step 6: AFTER assignment - pretrained_program.store has {len(pretrained_program.store.constant_embeddings)} embeddings")
-        print(f"🔍 Step 6: pretrained_program.store id: {id(pretrained_program.store)}")
         print(f"🔍 Step 6: Are they the same object? {pretrained_program.store is new_store}")
         
         # Test get_store() too
         get_store_result = pretrained_program.get_store()
-        print(f"🔍 Step 7: get_store() returns {len(get_store_result.constant_embeddings)} embeddings")
-        print(f"🔍 Step 7: get_store() id: {id(get_store_result)}")
         
         return pretrained_program   
 

@@ -38,13 +38,6 @@ class SoftProofModule(ProofModule):
         # Pass the cache to soft_mgu
         return soft_mgu(t1, t2, self.get_store(), self.embedding_metric, self.soft_unification_cache)
 
-    # def query(self, *args, **kwargs):
-    #     print("CALLED (SPL)")
-    #     if self.algebra is None:
-    #         self.algebra = _get_algebra(self.semantics, self)
-    #     self.algebra.reset()
-    #     print(f"Super query: {super().query(*args, **kwargs)}")
-    #     return super().query(*args, **kwargs)
     
     
     def __call__(self, query: Expr, groundtruth_object=None, **kwargs):
@@ -52,7 +45,6 @@ class SoftProofModule(ProofModule):
         Execute a query and find its result, properly handling variable unification.
         """
         result, proof_steps, nb_proofs = self.query(query, return_stats=True, **kwargs)
-        # print(f"__call__ Result: {result}, type: {type(result)}")
         
         if type(result) is set:
             return len(result) > 0.0, proof_steps, nb_proofs
@@ -100,17 +92,10 @@ class SoftProofModule(ProofModule):
                     return tensor_value, proof_steps, nb_proofs
         
         # No match found - return a tensor with requires_grad=True
-        print(f"No match found, returning tensor with requires_grad=True")
-        # print(f"Scene graph facts for failed query {query}:")
-        # for clause in self.clauses:
-        #     # if clause.functor in ['object', 'scene_graph', 'type', 'groundtruth']:
-        #     print(f"  {clause}")
         return torch.tensor(-20.0, requires_grad=True), proof_steps, nb_proofs
     
     def query(self, *args, **kwargs):
         print(f"QUERY CALLED: {args[0] if args else None}")
-        # print(f"Algebra type: {type(self.algebra).__name__}")
-        #print(self.store)
         
         # Capture original query before any transformation
         original_query = args[0] if args else None
@@ -137,24 +122,13 @@ class SoftProofModule(ProofModule):
         else:
             result_dict, proof_steps, nb_proofs = super().query(*args, return_stats=True, **kwargs)
         
-        # print(f"Query result stats:")
-        # print(f"  Proof steps: {proof_steps}")
-        # print(f"  Number of proofs: {nb_proofs}")
-        # print(f"  Result type: {type(result_dict)}")
         
         if isinstance(result_dict, dict):
-            print(f"  Result keys: {list(result_dict.keys())}")
             print("BREAK")
             for k, v in result_dict.items():
                 print(f"  {k}: {v}")
         
         # # Log whether the query itself was found in the results
-        # if isinstance(result_dict, dict) and original_query is not None:
-        #     if original_query in result_dict:
-        #         print(f"Query found in results with value: {result_dict[original_query]}")
-        #     else:
-        #         print(f"WARNING: Query not found in results")
-        #         print(f"Available keys: {list(result_dict.keys())}")
         
         # Return the appropriate result
         if 'return_stats' in kwargs and kwargs['return_stats']:
@@ -228,77 +202,42 @@ class SoftProofModule(ProofModule):
                     print(f"Couldn't add embedding for {constant}, skipping")
         
         # # After adding new embeddings, recreate the optimizer
-        # if hasattr(self, 'trainer_reference'):
-        #     print(f"Recreating optimizer after updating clauses")
         #     # Recreate optimizer with new parameters
-        #     self.trainer_reference.optimizer = get_optimizer(self.get_store(), self.trainer_reference.config)
         
         #     # Add new parameters to optimizer
-        # new_params = []
-        # for name, param in self.get_store().constant_embeddings.items():
-        #     if not any(param is p for group in optimizer.param_groups for p in group['params']):
         #         new_params.append(param)
         
-        # if new_params:
         #     optimizer.param_groups[0]['params'].extend(new_params)
         
         
         # Clear cache
         self.get_store().clear_cache()
 
-    # def update_clauses(self, DataInstance):
     #     """Update clauses with scene graph, preserving existing vocabulary."""
     #     # ... existing code up to vocabulary update ...
         
     #     # Update vocabulary
-    #     updated_vocabulary = Vocabulary().add_all(self.clauses)
-    #     self.get_store().vocabulary = updated_vocabulary
         
     #     # DEBUG: Check what's actually in the embedding store
-    #     store = self.get_store()
-    #     print(f"\n=== DEBUG EMBEDDING STORE CONTENTS ===")
-    #     print(f"Store has {len(store.constant_embeddings)} embeddings")
         
     #     # Check specifically for the problematic constants
-    #     problematic_constants = ['boat', 'car', 'dock', 'cap']
-    #     for const in problematic_constants:
-    #         is_present = const in store.constant_embeddings
-    #         print(f"  '{const}' in store: {is_present}")
-    #         if is_present:
-    #             embedding = store.constant_embeddings[const]
-    #             print(f"    Embedding norm: {embedding.norm().item():.6f}")
         
     #     # Show a sample of what IS in the store
-    #     sample_keys = list(store.constant_embeddings.keys())[:10]
-    #     print(f"Sample keys in store: {sample_keys}")
         
     #     # Add embeddings only for truly new constants
-    #     for constant in updated_vocabulary.get_constants():
     #         # Skip if contains dots or is a reserved name
-    #         if '.' in constant or constant in ['cpu', 'cuda', 'to']:
-    #             continue
                 
     #         # DEBUG: Check the specific lookup
-    #         is_in_store = constant in store.constant_embeddings
-    #         print(f"Checking constant '{constant}': in store = {is_in_store}")
             
     #         # Add embedding if not already present
-    #         if not is_in_store:
-    #             print(f"Initializing embedding for NEW constant: {constant}")
-    #             try:
     #                 store.constant_embeddings[constant] = store.initializer(constant)
-    #             except Exception as e:
-    #                 print(f"Couldn't add embedding for {constant}, skipping")
         
-    #     print(f"=== END DEBUG ===\n")
         
     #     # Clear cache
-    #     self.get_store().clear_cache()
      
             
     def analyze_failed_proof(self, query: Expr):
         """Special function to analyze why a proof is failing"""
-        print(f"\n=== PROOF ANALYSIS for query: {query} ===\n")
         
         # Try with extremely high depth and branching limits
         print("Attempting proof with very high limits...")
@@ -326,11 +265,6 @@ class SoftProofModule(ProofModule):
                 
                 # Check the first few items
                 for i, (_, _, proof) in enumerate(queue._queue[:3]):
-                    # print(f"\nQueue item {i}:")
-                    # print(f"  Query: {proof.query}")
-                    # print(f"  Goals: {proof.goals}")
-                    # print(f"  Is complete: {proof.is_complete()}")
-                    # print(f"  Value: {proof.value}")
                     
                     # Check for object predicates
                     if proof.goals and all(g.functor == "object" for g in proof.goals):
@@ -360,7 +294,6 @@ class SoftProofModule(ProofModule):
                         except Exception as e:
                             print(f"  Error creating manual proof: {str(e)}")
         
-        print("\n=== END PROOF ANALYSIS ===\n")
         return result
 
     
@@ -373,7 +306,6 @@ class SoftProofModule(ProofModule):
     def get_bbox_id_for_query_simple(self, query_result):
         """Simple, reliable bbox_id extraction"""
         metadata = getattr(self, '_last_proof_metadata', {})
-        # print(f"Metadata for query {query_result}: {metadata}")
         variable_bindings = metadata.get(query_result, {}).get('variable_bindings', {})
         
         # Find first bbox_id in the bindings (this is from target rule)
@@ -388,14 +320,12 @@ class SoftProofModule(ProofModule):
         """Get soft unifications from proof metadata"""
         metadata = self.get_proof_metadata(query_result)
         soft_unifs = metadata.get('soft_unifications', [])
-        # print(f"Retrieved {len(soft_unifs)} soft unifications for query: {query_result}")
         return soft_unifs
 
     def get_variable_bindings_for_query(self, query_result):
         """Get all variable bindings from proof metadata"""
         metadata = self.get_proof_metadata(query_result)
         bindings = metadata.get('variable_bindings', {})
-        # print(f"Retrieved variable bindings: {bindings} for query: {query_result}")
         return bindings
 
 

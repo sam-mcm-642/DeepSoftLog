@@ -74,5 +74,4 @@ def eval(folder: str, digits=None):
 
 
 if __name__ == "__main__":
-    # eval("1d run", digits=1)
     train("deepsoftlog/experiments/mnist_addition/config.yaml")
